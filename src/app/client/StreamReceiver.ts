@@ -159,6 +159,13 @@ export class StreamReceiver<P extends ParamsStream> extends ManagerClient<Params
     }
 
     public sendEvent(event: ControlMessage): void {
+        if (event.type === ControlMessage.TYPE_SET_SCREEN_POWER_MODE) {
+            const payload = event.toBuffer();
+            const mode = payload.length > 1 ? payload.readUInt8(1) : -1;
+            console.info(
+                `${TAG} Send TYPE_SET_SCREEN_POWER_MODE via WS: mode=${mode}, bytes=[${Array.from(payload).join(',')}]`,
+            );
+        }
         if (this.ws && this.ws.readyState === this.ws.OPEN) {
             this.ws.send(event.toBuffer());
         } else {

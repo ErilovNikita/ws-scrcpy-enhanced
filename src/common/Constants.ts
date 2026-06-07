@@ -1,10 +1,10 @@
 export const SERVER_PACKAGE = 'com.genymobile.scrcpy.Server';
 export const SERVER_PORT = 8886;
-export const SERVER_VERSION = '1.19-ws5';
+export const SERVER_VERSION = '3.3.4';
 
 export const SERVER_TYPE = 'web';
 
-export const LOG_LEVEL = 'ERROR';
+export const LOG_LEVEL = 'DEBUG';
 
 let SCRCPY_LISTENS_ON_ALL_INTERFACES;
 /// #if SCRCPY_LISTENS_ON_ALL_INTERFACES
@@ -13,8 +13,18 @@ SCRCPY_LISTENS_ON_ALL_INTERFACES = true;
 SCRCPY_LISTENS_ON_ALL_INTERFACES = false;
 /// #endif
 
-const ARGUMENTS = [SERVER_VERSION, SERVER_TYPE, LOG_LEVEL, SERVER_PORT, SCRCPY_LISTENS_ON_ALL_INTERFACES];
+const ARGUMENTS = [
+    SERVER_VERSION,
+    SERVER_TYPE,
+    LOG_LEVEL,
+    SERVER_PORT,
+    SCRCPY_LISTENS_ON_ALL_INTERFACES,
+    'ws_audio_warmup=true',
+    'audio_bit_rate=64000',
+    'ws_audio_channels=1',
+    'ws_audio_frame_mode=combined'
+];
 
 export const SERVER_PROCESS_NAME = 'app_process';
 
-export const ARGS_STRING = `/ ${SERVER_PACKAGE} ${ARGUMENTS.join(' ')} 2>&1 > /dev/null`;
+export const ARGS_STRING = `/ ${SERVER_PACKAGE} ${ARGUMENTS.join(' ')} > /data/local/tmp/ws_server.log`;

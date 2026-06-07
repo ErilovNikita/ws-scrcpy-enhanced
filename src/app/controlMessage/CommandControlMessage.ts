@@ -16,6 +16,7 @@ type FilePushParams = {
     chunk?: Uint8Array;
     fileName?: string;
     fileSize?: number;
+    destinationDir?: string;
 };
 
 export class CommandControlMessage extends ControlMessage {
@@ -67,16 +68,17 @@ export class CommandControlMessage extends ControlMessage {
         let offset = 0;
         const buffer = Buffer.alloc(1 + 1);
         offset = buffer.writeInt8(event.type, offset);
+        // scrcpy protocol expects screen power mode: OFF=0, NORMAL=2
         buffer.writeUInt8(mode ? 1 : 0, offset);
         event.buffer = buffer;
         return event;
     }
 
     public static createPushFileCommand(params: FilePushParams): CommandControlMessage {
-        const { id, fileName, fileSize, chunk, state } = params;
+        const { id, fileName, fileSize, chunk, state, destinationDir } = params;
 
         if (state === FilePushState.START) {
-            return this.createPushFileStartCommand(id, fileName as string, fileSize as number);
+            return this.createPushFileStartCommand(id, fileName as string, fileSize as number, destinationDir);
         }
         if (state === FilePushState.APPEND) {
             if (!chunk) {
@@ -91,19 +93,35 @@ export class CommandControlMessage extends ControlMessage {
         throw TypeError(`Unsupported state: "${state}"`);
     }
 
-    private static createPushFileStartCommand(id: number, fileName: string, fileSize: number): CommandControlMessage {
+    private static createPushFileStartCommand(
+        id: number,
+        fileName: string,
+        fileSize: number,
+        destinationDir?: string,
+    ): CommandControlMessage {
         const event = new CommandControlMessage(ControlMessage.TYPE_PUSH_FILE);
         const text = Util.stringToUtf8ByteArray(fileName);
+        const destinationDirText = destinationDir ? Util.stringToUtf8ByteArray(destinationDir) : undefined;
         const typeField = 1;
         const idField = 2;
         const stateField = 1;
         const sizeField = 4;
         const textLengthField = 2;
         const textLength = text.length;
+        const destinationDirLengthField = destinationDirText ? 2 : 0;
+        const destinationDirLength = destinationDirText ? destinationDirText.length : 0;
         let offset = CommandControlMessage.PAYLOAD_LENGTH;
 
         const buffer = Buffer.alloc(
-            offset + typeField + idField + stateField + sizeField + textLengthField + textLength,
+            offset +
+                typeField +
+                idField +
+                stateField +
+                sizeField +
+                textLengthField +
+                textLength +
+                destinationDirLengthField +
+                destinationDirLength,
         );
         buffer.writeUInt8(event.type, offset);
         offset += typeField;
@@ -118,6 +136,14 @@ export class CommandControlMessage extends ControlMessage {
         text.forEach((byte, index) => {
             buffer.writeUInt8(byte, index + offset);
         });
+        offset += textLength;
+        if (destinationDirText) {
+            buffer.writeUInt16BE(destinationDirLength, offset);
+            offset += 2;
+            destinationDirText.forEach((byte, index) => {
+                buffer.writeUInt8(byte, index + offset);
+            });
+        }
         event.buffer = buffer;
         return event;
     }
@@ -165,7 +191,14 @@ export class CommandControlMessage extends ControlMessage {
 
     public static pushFileCommandFromBuffer(
         buffer: Buffer,
-    ): { id: number; state: FilePushState; chunk?: Buffer; fileSize?: number; fileName?: string } {
+    ): {
+        id: number;
+        state: FilePushState;
+        chunk?: Buffer;
+        fileSize?: number;
+        fileName?: string;
+        destinationDir?: string;
+    } {
         let offset = 0;
         const type = buffer.readUInt8(offset);
         offset += 1;
@@ -179,6 +212,7 @@ export class CommandControlMessage extends ControlMessage {
         let chunk: Buffer | undefined;
         let fileSize: number | undefined;
         let fileName: string | undefined;
+        let destinationDir: string | undefined;
         if (state === FilePushState.APPEND) {
             const chunkLength = buffer.readUInt32BE(offset);
             offset += 4;
@@ -189,8 +223,16 @@ export class CommandControlMessage extends ControlMessage {
             const textLength = buffer.readUInt16BE(offset);
             offset += 2;
             fileName = Util.utf8ByteArrayToString(buffer.slice(offset, offset + textLength));
+            offset += textLength;
+            if (offset + 2 <= buffer.byteLength) {
+                const destLength = buffer.readUInt16BE(offset);
+                offset += 2;
+                if (destLength > 0 && offset + destLength <= buffer.byteLength) {
+                    destinationDir = Util.utf8ByteArrayToString(buffer.slice(offset, offset + destLength));
+                }
+            }
         }
-        return { id, state, chunk, fileName, fileSize };
+        return { id, state, chunk, fileName, fileSize, destinationDir };
     }
 
     private buffer?: Buffer;

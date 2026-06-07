@@ -74,20 +74,42 @@ export class GoogToolBox extends ToolBox {
             button.addEventListener('mouseup', handler);
             return button;
         });
+
         if (player.supportsScreenshot) {
             const screenshot = new ToolBoxButton('Take screenshot', SvgImage.Icon.CAMERA);
             screenshot.addEventListener('click', () => {
                 player.createScreenshot(client.getDeviceName());
             });
-            elements.push(screenshot);
+            // useless function
+            // elements.push(screenshot);
         }
+
+        const uploadFile = new ToolBoxButton('Upload file', SvgImage.Icon.UPLOAD);
+        uploadFile.addEventListener('click', () => {
+            client.selectAndUploadFile('/sdcard/Download');
+        });
+        elements.push(uploadFile);
+
+        const fullscreen = new ToolBoxButton('Fullscreen', SvgImage.Icon.FULLSCREEN);
+        fullscreen.addEventListener('click', () => {
+            if (document.fullscreenElement) {
+                document.exitFullscreen().catch((e) => {
+                    console.error('Failed to exit fullscreen:', e);
+                });
+            } else {
+                document.documentElement.requestFullscreen().catch((e) => {
+                    console.error('Failed to enter fullscreen:', e);
+                });
+            }
+        });
+        elements.push(fullscreen);
 
         const keyboard = new ToolBoxCheckbox(
             'Capture keyboard',
             SvgImage.Icon.KEYBOARD,
             `capture_keyboard_${udid}_${playerName}`,
         );
-        keyboard.addEventListener('click', (_, el) => {
+        keyboard.addEventListener('change', (_, el) => {
             const element = el.getElement();
             client.setHandleKeyboardEvents(element.checked);
         });
@@ -96,13 +118,61 @@ export class GoogToolBox extends ToolBox {
         if (moreBox) {
             const displayId = player.getVideoSettings().displayId;
             const id = `show_more_${udid}_${playerName}_${displayId}`;
-            const more = new ToolBoxCheckbox('More', SvgImage.Icon.MORE, id);
-            more.addEventListener('click', (_, el) => {
+            const more = new ToolBoxCheckbox('More', SvgImage.Icon.SETTINGS, id);
+            more.addEventListener('change', (_, el) => {
                 const element = el.getElement();
                 moreBox.style.display = element.checked ? 'block' : 'none';
             });
             elements.unshift(more);
         }
+
+        const toggleSidebar = new ToolBoxCheckbox(
+            'Toggle Sidebar',
+            SvgImage.Icon.MENU,
+            `toggle_sidebar_${udid}_${playerName}`,
+        );
+        toggleSidebar.addEventListener('change', (_, el) => {
+            const element = el.getElement();
+            const holder = client.getControlButtonsElement();
+            const isChecked = element.checked;
+
+            elements.forEach((item) => {
+                if (item !== toggleSidebar) {
+                    item.getAllElements().forEach((htmlEl) => {
+                        htmlEl.style.display = isChecked ? 'none' : '';
+                    });
+                }
+            });
+
+            if (holder) {
+                holder.style.width = isChecked ? '0' : '';
+            }
+
+            const label = toggleSidebar.getAllElements()[1];
+            if (label) {
+                if (isChecked) {
+                        label.style.position = 'absolute';
+                        label.style.right = '0';
+                        label.style.top = '0';
+                        label.style.zIndex = '100';
+                        label.style.margin = '0';
+                        label.style.backgroundColor = 'var(--control-buttons-bg-color)';
+                        label.style.opacity = '0.5';
+                    } else {
+                        label.style.position = '';
+                        label.style.right = '';
+                        label.style.top = '';
+                        label.style.zIndex = '';
+                        label.style.margin = '';
+                        label.style.backgroundColor = '';
+                        label.style.opacity = '';
+                    }
+                }
+                // Trigger screen fit to adjust video size immediately
+                client.triggerScreenFit();
+            });
+        elements.unshift(toggleSidebar);
+
         return new GoogToolBox(elements);
     }
 }

@@ -21,6 +21,10 @@ export interface DragAndPushListener {
     onError: (error: Error | string) => void;
 }
 
+export type FilePushHandlerOptions = {
+    resolveDestinationDir?: (files: File[]) => string | undefined;
+};
+
 const TAG = '[FilePushHandler]';
 
 export default class FilePushHandler implements DragEventListener {
@@ -29,11 +33,23 @@ export default class FilePushHandler implements DragEventListener {
     private responseWaiter: Map<number, Resolve | Resolve[]> = new Map();
     private listeners: Set<DragAndPushListener> = new Set();
     private pushIdFileNameMap: Map<number, string> = new Map();
+    private readonly options: FilePushHandlerOptions;
 
-    constructor(private readonly element: HTMLElement, private readonly filePushStream: FilePushStream) {
+    constructor(
+        private readonly element: HTMLElement,
+        private readonly filePushStream: FilePushStream,
+        options: FilePushHandlerOptions = {},
+    ) {
+        this.options = options;
         DragAndDropHandler.addEventListener(this);
         filePushStream.on('response', this.onStreamResponse);
         filePushStream.on('error', this.onStreamError);
+    }
+
+    private static sanitizeFileName(name: string): string {
+        const parts = name.split(/[\\/]/);
+        const last = parts[parts.length - 1];
+        return last || name;
     }
 
     private sendUpdate(params: PushUpdateParams): void {
@@ -60,9 +76,10 @@ export default class FilePushHandler implements DragEventListener {
         return { reader, result };
     }
 
-    private async pushFile(file: File): Promise<void> {
+    private async pushFile(file: File, destinationDir?: string): Promise<void> {
         const start = Date.now();
-        const { name: fileName, size: fileSize } = file;
+        const fileName = FilePushHandler.sanitizeFileName(file.name);
+        const fileSize = file.size;
         if (!this.filePushStream.hasConnection()) {
             this.listeners.forEach((listener) => {
                 listener.onError('WebSocket is not ready');
@@ -79,7 +96,7 @@ export default class FilePushHandler implements DragEventListener {
 
         this.pushIdFileNameMap.set(pushId, fileName);
         const waitPromise = this.waitForResponse(pushId);
-        this.filePushStream.sendEventStart({ id: pushId, fileName, fileSize });
+        this.filePushStream.sendEventStart({ id: pushId, fileName, fileSize, destinationDir });
         const [{ code: startResponseCode }, { reader, result }] = await Promise.all([
             waitPromise,
             FilePushHandler.getStreamReader(file),
@@ -179,10 +196,11 @@ export default class FilePushHandler implements DragEventListener {
         this.listeners.forEach((listener) => {
             listener.onDrop();
         });
+        const destinationDir = this.options.resolveDestinationDir ? this.options.resolveDestinationDir(files) : undefined;
         files.forEach((file: File) => {
             const { type, name } = file;
             if (this.filePushStream.isAllowedFile(file)) {
-                this.pushFile(file);
+                this.pushFile(file, destinationDir);
             } else {
                 const errorParams: PushUpdateParams = {
                     pushId: FilePushHandler.REQUEST_NEW_PUSH_ID,
@@ -196,6 +214,33 @@ export default class FilePushHandler implements DragEventListener {
             }
         });
         return true;
+    }
+
+    public pushFiles(files: File[] | FileList, destinationDir?: string): void {
+        const list = Array.isArray(files) ? files : Array.from(files);
+        const resolvedDestinationDir =
+            typeof destinationDir === 'string'
+                ? destinationDir
+                : this.options.resolveDestinationDir
+                  ? this.options.resolveDestinationDir(list)
+                  : undefined;
+
+        list.forEach((file: File) => {
+            const { type, name } = file;
+            if (this.filePushStream.isAllowedFile(file)) {
+                this.pushFile(file, resolvedDestinationDir);
+            } else {
+                const errorParams: PushUpdateParams = {
+                    pushId: FilePushHandler.REQUEST_NEW_PUSH_ID,
+                    fileName: name,
+                    message: `Unsupported type "${type}"`,
+                    progress: -1,
+                    error: true,
+                    finished: true,
+                };
+                this.sendUpdate(errorParams);
+            }
+        });
     }
 
     public static getErrorMessage(code: number, message?: string): string {
@@ -253,4 +298,7 @@ const RESPONSE_CODES = new Map([
     [FilePushResponseStatus.ERROR_UNKNOWN_ID, 'Unknown id'],
     [FilePushResponseStatus.ERROR_NO_FREE_ID, 'No free id'],
     [FilePushResponseStatus.ERROR_INCORRECT_SIZE, 'Incorrect size'],
+    [FilePushResponseStatus.ERROR_INVALID_DESTINATION, 'Invalid destination directory'],
+    [FilePushResponseStatus.ERROR_FAILED_TO_CREATE_DIR, 'Failed to create destination directory'],
+    [FilePushResponseStatus.ERROR_DESTINATION_NOT_DIRECTORY, 'Destination exists but is not a directory'],
 ]);

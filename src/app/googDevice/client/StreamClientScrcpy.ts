@@ -30,6 +30,7 @@ import { ACTION } from '../../../common/Action';
 import { StreamReceiverScrcpy } from './StreamReceiverScrcpy';
 import { ParamsDeviceTracker } from '../../../types/ParamsDeviceTracker';
 import { ScrcpyFilePushStream } from '../filePush/ScrcpyFilePushStream';
+import { ScrcpyAudioController, ScrcpyAudioFrameMode, ScrcpyAudioOptions } from '../../audio/ScrcpyAudioController';
 
 type StartParams = {
     udid: string;
@@ -39,7 +40,34 @@ type StartParams = {
     videoSettings?: VideoSettings;
 };
 
+type SavedVideoSettingsPayload = {
+    bitrate?: number;
+    maxFps?: number;
+    iFrameInterval?: number;
+    bounds?: {
+        width?: number;
+        height?: number;
+    };
+};
+
 const TAG = '[StreamClientScrcpy]';
+const VIDEO_META_LENGTH = 12;
+
+function readU32BE(data: Uint8Array, offset: number): number {
+    return new DataView(data.buffer, data.byteOffset, data.byteLength).getUint32(offset, false);
+}
+
+function readI64BE(data: Uint8Array, offset: number): number {
+    const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+    const hi = view.getInt32(offset, false);
+    const lo = view.getUint32(offset + 4, false);
+    if (hi >= 0) {
+        return hi * 4294967296 + lo;
+    }
+    const hiU = (~hi) >>> 0;
+    const loU = (~lo) >>> 0;
+    return -((hiU * 4294967296 + loU) + 1);
+}
 
 export class StreamClientScrcpy
     extends BaseClient<ParamsStreamScrcpy, never>
@@ -47,19 +75,33 @@ export class StreamClientScrcpy
 {
     public static ACTION = 'stream';
     private static players: Map<string, PlayerClass> = new Map<string, PlayerClass>();
+    private static savedVideoSettingsKeyPrefix = 'ws-scrcpy:saved-video-settings:v1';
 
     private controlButtons?: HTMLElement;
     private deviceName = '';
     private clientId = -1;
     private clientsCount = -1;
     private joinedStream = false;
-    private requestedVideoSettings?: VideoSettings;
     private touchHandler?: FeaturedInteractionHandler;
     private moreBox?: GoogMoreBox;
     private player?: BasePlayer;
     private filePushHandler?: FilePushHandler;
     private fitToScreen?: boolean;
     private readonly streamReceiver: StreamReceiverScrcpy;
+    private videoContainer?: HTMLElement;
+    private resizeObserver?: ResizeObserver;
+    private viewportFitRaf?: number;
+    private applyingViewportFit = false;
+    private initialAutoFitApplied = false;
+    private audioController?: ScrcpyAudioController;
+    private audioEnabled = false;
+    private audioOptions: ScrcpyAudioOptions = { frameMode: 'combined', channels: 1, bitrate: 64_000 };
+    private pendingVideoPtsUs = 0;
+    private pendingVideoPacketSize = 0;
+    private uiStateBinding?: { restore: () => void; dispose: () => void };
+    private uiStateRestored = false;
+    private savedVideoSettings?: SavedVideoSettingsPayload;
+    private savedVideoSettingsApplied = false;
 
     public static registerPlayer(playerClass: PlayerClass): void {
         if (playerClass.isSupported()) {
@@ -167,7 +209,7 @@ export class StreamClientScrcpy
         }
     };
 
-    public onVideo = (data: ArrayBuffer): void => {
+    public onVideo = (data: ArrayBuffer | Uint8Array): void => {
         if (!this.player) {
             return;
         }
@@ -176,7 +218,35 @@ export class StreamClientScrcpy
             this.player.play();
         }
         if (this.player.getState() === STATE.PLAYING) {
-            this.player.pushFrame(new Uint8Array(data));
+            const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
+            const sendFrameMeta = this.player.getVideoSettings().sendFrameMeta;
+            if (sendFrameMeta) {
+                if (this.pendingVideoPacketSize > 0) {
+                    if (bytes.byteLength === this.pendingVideoPacketSize) {
+                        const ptsUs = this.pendingVideoPtsUs;
+                        this.pendingVideoPtsUs = 0;
+                        this.pendingVideoPacketSize = 0;
+                        this.player.pushFrame(bytes, ptsUs);
+                        return;
+                    }
+                    this.pendingVideoPtsUs = 0;
+                    this.pendingVideoPacketSize = 0;
+                }
+                if (bytes.byteLength === VIDEO_META_LENGTH) {
+                    this.pendingVideoPtsUs = readI64BE(bytes, 0);
+                    this.pendingVideoPacketSize = readU32BE(bytes, 8);
+                    return;
+                }
+                if (bytes.byteLength > VIDEO_META_LENGTH) {
+                    const ptsUs = readI64BE(bytes, 0);
+                    const packetSize = readU32BE(bytes, 8);
+                    if (packetSize > 0 && VIDEO_META_LENGTH + packetSize === bytes.byteLength) {
+                        this.player.pushFrame(bytes.subarray(VIDEO_META_LENGTH, VIDEO_META_LENGTH + packetSize), ptsUs);
+                        return;
+                    }
+                }
+            }
+            this.player.pushFrame(bytes);
         }
     };
 
@@ -207,11 +277,7 @@ export class StreamClientScrcpy
             this.fitToScreen = this.player.getFitToScreenStatus();
         }
         if (this.fitToScreen) {
-            const newBounds = this.getMaxSize();
-            if (newBounds) {
-                currentSettings = StreamClientScrcpy.createVideoSettingsWithBounds(currentSettings, newBounds);
-                this.player.setVideoSettings(currentSettings, this.fitToScreen, false);
-            }
+            this.applyViewportFit();
         }
         if (!videoSettings || !screenInfo) {
             this.joinedStream = true;
@@ -224,10 +290,12 @@ export class StreamClientScrcpy
         const oldInfo = this.player.getScreenInfo();
         if (!screenInfo.equals(oldInfo)) {
             this.player.setScreenInfo(screenInfo);
+            this.applyViewportFit();
         }
+        this.tryRunInitialAutoFit(screenInfo);
 
         if (!videoSettings.equals(currentSettings)) {
-            this.applyNewVideoSettings(videoSettings, videoSettings.equals(this.requestedVideoSettings));
+            this.applyNewVideoSettings(videoSettings, false);
         }
         if (!oldInfo) {
             const bounds = currentSettings.bounds;
@@ -246,6 +314,8 @@ export class StreamClientScrcpy
             this.joinedStream = true;
             this.sendMessage(CommandControlMessage.createSetVideoSettingsCommand(min));
         }
+        this.restoreSavedVideoSettingsAfterAutoFit();
+        this.restoreUiStateOnce();
     };
 
     public onDisconnected = (): void => {
@@ -254,12 +324,63 @@ export class StreamClientScrcpy
         this.streamReceiver.off('clientsStats', this.onClientsStats);
         this.streamReceiver.off('displayInfo', this.onDisplayInfo);
         this.streamReceiver.off('disconnected', this.onDisconnected);
+        this.player?.off('video-view-resize', this.onPlayerViewResize);
+        this.player?.off('input-video-resize', this.onInputVideoResize);
+        this.setAudioEnabled(false);
+        this.pendingVideoPtsUs = 0;
+        this.pendingVideoPacketSize = 0;
+
+        window.removeEventListener('resize', this.onWindowResize);
+        if (this.resizeObserver) {
+            this.resizeObserver.disconnect();
+            this.resizeObserver = undefined;
+        }
+        if (typeof this.viewportFitRaf === 'number') {
+            cancelAnimationFrame(this.viewportFitRaf);
+            this.viewportFitRaf = undefined;
+        }
 
         this.filePushHandler?.release();
         this.filePushHandler = undefined;
+        this.uiStateBinding?.dispose();
+        this.uiStateBinding = undefined;
+        this.uiStateRestored = false;
+        this.savedVideoSettings = undefined;
+        this.savedVideoSettingsApplied = false;
         this.touchHandler?.release();
         this.touchHandler = undefined;
     };
+
+    public setAudioEnabled(enabled: boolean): void {
+        if (!ScrcpyAudioController.isSupported() || !this.player) {
+            return;
+        }
+        if (this.audioEnabled === enabled) {
+            return;
+        }
+        this.audioEnabled = enabled;
+        this.pendingVideoPtsUs = 0;
+        this.pendingVideoPacketSize = 0;
+        if (!this.audioController) {
+            this.audioController = new ScrcpyAudioController(this.params);
+        }
+        if (enabled) {
+            this.audioController.setOptions(this.audioOptions);
+        }
+        this.audioController.setEnabled(enabled);
+    }
+
+    public getAudioOptions(): ScrcpyAudioOptions {
+        return { ...this.audioOptions };
+    }
+
+    public setAudioOptions(options: { frameMode?: ScrcpyAudioFrameMode; channels?: 1 | 2; bitrate?: number }): void {
+        this.audioOptions = { ...this.audioOptions, ...options };
+        if (!this.audioController) {
+            this.audioController = new ScrcpyAudioController(this.params);
+        }
+        this.audioController.setOptions(this.audioOptions);
+    }
 
     public startStream({ udid, player, playerName, videoSettings, fitToScreen }: StartParams): void {
         if (!udid) {
@@ -267,6 +388,7 @@ export class StreamClientScrcpy
         }
 
         this.fitToScreen = fitToScreen;
+        this.initialAutoFitApplied = false;
         if (!player) {
             if (typeof playerName !== 'string') {
                 throw Error('Must provide BasePlayer instance or playerName');
@@ -290,6 +412,9 @@ export class StreamClientScrcpy
         if (!videoSettings) {
             videoSettings = player.getVideoSettings();
         }
+        this.savedVideoSettingsApplied = false;
+        this.savedVideoSettings = StreamClientScrcpy.readSavedVideoSettings(player.getName(), udid, videoSettings.displayId);
+        this.applyNewVideoSettings(videoSettings, false);
 
         const deviceView = document.createElement('div');
         deviceView.className = 'device-view';
@@ -297,6 +422,9 @@ export class StreamClientScrcpy
             if (ev && ev instanceof Event && ev.type === 'error') {
                 console.error(TAG, ev);
             }
+            this.uiStateBinding?.dispose();
+            this.uiStateBinding = undefined;
+            this.uiStateRestored = false;
             let parent;
             parent = deviceView.parentElement;
             if (parent) {
@@ -320,22 +448,63 @@ export class StreamClientScrcpy
         deviceView.appendChild(this.controlButtons);
         const video = document.createElement('div');
         video.className = 'video';
+        this.videoContainer = video;
         deviceView.appendChild(video);
         deviceView.appendChild(moreBox);
         player.setParent(video);
         player.pause();
 
         document.body.appendChild(deviceView);
-        if (fitToScreen) {
-            const newBounds = this.getMaxSize();
-            if (newBounds) {
-                videoSettings = StreamClientScrcpy.createVideoSettingsWithBounds(videoSettings, newBounds);
-            }
+        this.uiStateBinding?.dispose();
+        this.uiStateBinding = Util.bindFormStateToLocalStorage(deviceView, 'ws-scrcpy:ui-state:v1', {
+            deferRestore: true,
+            restoreMode: 'simulate',
+        });
+        this.uiStateRestored = false;
+        window.addEventListener('resize', this.onWindowResize);
+        player.on('video-view-resize', this.onPlayerViewResize);
+        player.on('input-video-resize', this.onInputVideoResize);
+        if (typeof ResizeObserver !== 'undefined') {
+            this.resizeObserver = new ResizeObserver(() => {
+                this.scheduleViewportFit();
+            });
+            this.resizeObserver.observe(document.documentElement);
+            this.resizeObserver.observe(this.controlButtons);
+            this.resizeObserver.observe(video);
         }
-        this.applyNewVideoSettings(videoSettings, false);
+        this.scheduleViewportFit();
         const element = player.getTouchableElement();
         const logger = new DragAndPushLogger(element);
-        this.filePushHandler = new FilePushHandler(element, new ScrcpyFilePushStream(this.streamReceiver));
+        let lastDestinationDir = '/sdcard/Download';
+        this.filePushHandler = new FilePushHandler(element, new ScrcpyFilePushStream(this.streamReceiver), {
+            resolveDestinationDir: () => {
+                const input = window.prompt(
+                    'Upload destination directory (absolute path like /sdcard/Download). Leave empty or Cancel to use default /data/local/tmp',
+                    lastDestinationDir,
+                );
+                if (input === null) {
+                    return;
+                }
+                const trimmed = input.trim();
+                if (!trimmed) {
+                    return;
+                }
+                const normalized = trimmed.replace(/\\/g, '/');
+                if (!normalized.startsWith('/')) {
+                    return;
+                }
+                if (normalized.includes('\0')) {
+                    return;
+                }
+                const withoutTrailingSlash = normalized.length > 1 ? normalized.replace(/\/+$/, '') : normalized;
+                const segments = withoutTrailingSlash.split('/').filter(Boolean);
+                if (segments.some((s) => s === '.' || s === '..')) {
+                    return;
+                }
+                lastDestinationDir = withoutTrailingSlash;
+                return withoutTrailingSlash;
+            },
+        });
         this.filePushHandler.addEventListener(logger);
 
         const streamReceiver = this.streamReceiver;
@@ -344,11 +513,91 @@ export class StreamClientScrcpy
         streamReceiver.on('clientsStats', this.onClientsStats);
         streamReceiver.on('displayInfo', this.onDisplayInfo);
         streamReceiver.on('disconnected', this.onDisconnected);
+        streamReceiver.on('connected', () => {
+            this.onConnected();
+        });
+        if (streamReceiver.hasConnection()) {
+            this.onConnected();
+        }
         console.log(TAG, player.getName(), udid);
+    }
+
+    private restoreUiStateOnce(): void {
+        if (this.uiStateRestored) {
+            return;
+        }
+        if (!this.uiStateBinding) {
+            return;
+        }
+        this.uiStateRestored = true;
+        this.uiStateBinding.restore();
+    }
+
+    private connectedHandled = false;
+    private onConnected(): void {
+        if (this.connectedHandled) {
+            return;
+        }
+        this.connectedHandled = true;
+        // Wait for real input stream resolution before running initial auto-fit.
+    }
+
+    public triggerScreenFit(): void {
+        this.scheduleViewportFit();
+        if (!this.player || !this.fitToScreen) {
+            return;
+        }
+        const maxBounds = this.getMaxSize();
+        if (!maxBounds) {
+            return;
+        }
+        const currentSettings = this.player.getVideoSettings();
+        if (currentSettings.bounds && currentSettings.bounds.equals(maxBounds)) {
+            return;
+        }
+        const newSettings = StreamClientScrcpy.createVideoSettingsWithBounds(currentSettings, maxBounds);
+        this.sendNewVideoSetting(newSettings);
     }
 
     public sendMessage(message: ControlMessage): void {
         this.streamReceiver.sendEvent(message);
+    }
+
+    public selectAndUploadFile(destinationDir = '/sdcard/Download'): void {
+        if (!this.filePushHandler) {
+            return;
+        }
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.multiple = false;
+        input.style.display = 'none';
+        document.body.appendChild(input);
+
+        const cleanup = () => {
+            input.value = '';
+            input.remove();
+        };
+
+        const onFocus = () => {
+            window.removeEventListener('focus', onFocus);
+            window.setTimeout(() => {
+                if (!input.files || input.files.length === 0) {
+                    cleanup();
+                }
+            }, 0);
+        };
+        window.addEventListener('focus', onFocus);
+
+        input.addEventListener('change', () => {
+            const file = input.files && input.files[0];
+            cleanup();
+            if (!file) {
+                return;
+            }
+            this.filePushHandler?.pushFiles([file], destinationDir);
+        });
+
+        input.click();
     }
 
     public getDeviceName(): string {
@@ -368,7 +617,6 @@ export class StreamClientScrcpy
     }
 
     public sendNewVideoSetting(videoSettings: VideoSettings): void {
-        this.requestedVideoSettings = videoSettings;
         this.sendMessage(CommandControlMessage.createSetVideoSettingsCommand(videoSettings));
     }
 
@@ -376,17 +624,25 @@ export class StreamClientScrcpy
         return this.clientId;
     }
 
+    public getControlButtonsElement(): HTMLElement | undefined {
+        return this.controlButtons;
+    }
+
     public getClientsCount(): number {
         return this.clientsCount;
     }
 
     public getMaxSize(): Size | undefined {
-        if (!this.controlButtons) {
+        if (!this.controlButtons || !this.videoContainer) {
             return;
         }
-        const body = document.body;
-        const width = (body.clientWidth - this.controlButtons.clientWidth) & ~15;
-        const height = body.clientHeight & ~15;
+        const dpr = window.devicePixelRatio || 1;
+        const viewportWidth =
+            document.documentElement.clientWidth || document.body.clientWidth || window.innerWidth;
+        const viewportHeight =
+            document.documentElement.clientHeight || document.body.clientHeight || window.innerHeight;
+        const width = ((viewportWidth - this.controlButtons.clientWidth) * dpr) & ~15;
+        const height = (viewportHeight * dpr) & ~15;
         return new Size(width, height);
     }
 
@@ -398,15 +654,154 @@ export class StreamClientScrcpy
     }
 
     private applyNewVideoSettings(videoSettings: VideoSettings, saveToStorage: boolean): void {
-        let fitToScreen = false;
-
-        // TODO: create control (switch/checkbox) instead
-        if (videoSettings.bounds && videoSettings.bounds.equals(this.getMaxSize())) {
-            fitToScreen = true;
-        }
         if (this.player) {
-            this.player.setVideoSettings(videoSettings, fitToScreen, saveToStorage);
+            this.player.setVideoSettings(videoSettings, !!this.fitToScreen, saveToStorage);
+            this.scheduleViewportFit();
         }
+    }
+
+    private onWindowResize = (): void => {
+        this.scheduleViewportFit();
+    };
+
+    private onPlayerViewResize = (): void => {
+        if (this.applyingViewportFit) {
+            return;
+        }
+        this.scheduleViewportFit();
+    };
+
+    private onInputVideoResize = (): void => {
+        this.tryRunInitialAutoFit();
+    };
+
+    private scheduleViewportFit(): void {
+        if (typeof this.viewportFitRaf === 'number') {
+            return;
+        }
+        this.viewportFitRaf = requestAnimationFrame(() => {
+            this.viewportFitRaf = undefined;
+            this.applyViewportFit();
+        });
+    };
+
+    private applyViewportFit(): void {
+        if (!this.player || !this.videoContainer) {
+            return;
+        }
+        const screenInfo = this.player.getScreenInfo();
+        if (!screenInfo) {
+            return;
+        }
+        const { width: videoWidth, height: videoHeight } = screenInfo.videoSize;
+        const maxSize = this.getMaxSize();
+        if (!maxSize || maxSize.width <= 0 || maxSize.height <= 0 || videoWidth <= 0 || videoHeight <= 0) {
+            this.player.setViewSize(videoWidth, videoHeight);
+            return;
+        }
+        const scale = Math.min(maxSize.width / videoWidth, maxSize.height / videoHeight);
+        const fittedWidth = Math.max(16, (Math.floor(videoWidth * scale) | 0) & ~15);
+        const fittedHeight = Math.max(16, (Math.floor(videoHeight * scale) | 0) & ~15);
+        this.applyingViewportFit = true;
+        try {
+            this.player.setViewSize(fittedWidth, fittedHeight);
+        } finally {
+            this.applyingViewportFit = false;
+        }
+    }
+
+    private tryRunInitialAutoFit(screenInfo?: { videoSize: Size }): void {
+        if (this.initialAutoFitApplied || !this.player) {
+            return;
+        }
+        const info = screenInfo || this.player.getScreenInfo();
+        if (!info) {
+            return;
+        }
+        this.initialAutoFitApplied = true;
+        this.scheduleViewportFit();
+        const maxBounds = this.getMaxSize();
+        if (!maxBounds) {
+            return;
+        }
+        const currentSettings = this.player.getVideoSettings();
+        if (currentSettings.bounds && currentSettings.bounds.equals(maxBounds)) {
+            return;
+        }
+        const newSettings = StreamClientScrcpy.createVideoSettingsWithBounds(currentSettings, maxBounds);
+        this.sendNewVideoSetting(newSettings);
+    }
+
+    private restoreSavedVideoSettingsAfterAutoFit(): void {
+        if (this.savedVideoSettingsApplied || !this.savedVideoSettings || !this.player) {
+            return;
+        }
+        if (!this.initialAutoFitApplied) {
+            return;
+        }
+        this.savedVideoSettingsApplied = true;
+        const merged = StreamClientScrcpy.mergeVideoSettingsWithSaved(this.player.getVideoSettings(), this.savedVideoSettings);
+        this.sendNewVideoSetting(merged);
+    }
+
+    private static getSavedVideoSettingsKey(playerName: string, udid: string, displayId: number): string {
+        return `${StreamClientScrcpy.savedVideoSettingsKeyPrefix}:${playerName}:${udid}:${displayId}`;
+    }
+
+    private static readSavedVideoSettings(
+        playerName: string,
+        udid: string,
+        displayId: number,
+    ): SavedVideoSettingsPayload | undefined {
+        if (!window.localStorage) {
+            return;
+        }
+        const key = StreamClientScrcpy.getSavedVideoSettingsKey(playerName, udid, displayId);
+        const raw = window.localStorage.getItem(key);
+        if (!raw) {
+            return;
+        }
+        try {
+            const parsed: any = JSON.parse(raw);
+            if (!parsed || typeof parsed !== 'object') {
+                return;
+            }
+            return parsed as SavedVideoSettingsPayload;
+        } catch (error: any) {
+            return;
+        }
+    }
+
+    private static mergeVideoSettingsWithSaved(current: VideoSettings, saved: SavedVideoSettingsPayload): VideoSettings {
+        const toInt = (value: any): number | undefined => {
+            const n = typeof value === 'number' ? value : typeof value === 'string' ? parseInt(value, 10) : NaN;
+            return typeof n === 'number' && !isNaN(n) ? (n | 0) : undefined;
+        };
+        const bitrate = toInt(saved.bitrate);
+        const maxFps = toInt(saved.maxFps);
+        const iFrameInterval = toInt(saved.iFrameInterval);
+        let bounds: Size | undefined;
+        if (saved.bounds && typeof saved.bounds === 'object') {
+            const width = toInt(saved.bounds.width);
+            const height = toInt(saved.bounds.height);
+            const w = (width || 0) & ~15;
+            const h = (height || 0) & ~15;
+            if (w > 0 && h > 0) {
+                bounds = new Size(w, h);
+            }
+        }
+        return new VideoSettings({
+            bounds: bounds || current.bounds,
+            bitrate: typeof bitrate === 'number' ? bitrate : current.bitrate,
+            maxFps: typeof maxFps === 'number' ? maxFps : current.maxFps,
+            iFrameInterval: typeof iFrameInterval === 'number' ? iFrameInterval : current.iFrameInterval,
+            lockedVideoOrientation: current.lockedVideoOrientation,
+            sendFrameMeta: current.sendFrameMeta,
+            displayId: current.displayId,
+            codecOptions: current.codecOptions,
+            encoderName: current.encoderName,
+            crop: current.crop,
+        });
     }
 
     public static createEntryForDeviceList(

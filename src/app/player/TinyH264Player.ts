@@ -71,7 +71,7 @@ export class TinyH264Player extends BaseCanvasBasedPlayer {
         }
     }
 
-    protected decode(data: Uint8Array): void {
+    protected decode(data: Uint8Array, _ptsUs: number): void {
         if (!this.worker || !this.isDecoderReady) {
             return;
         }

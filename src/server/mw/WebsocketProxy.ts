@@ -81,6 +81,12 @@ export class WebsocketProxy extends Mw {
     }
 
     protected onSocketMessage(event: WS.MessageEvent): void {
+        if (Buffer.isBuffer(event.data) && event.data.length > 1 && event.data[0] === 10) {
+            const mode = event.data[1];
+            console.info(
+                `[${WebsocketProxy.TAG}] Forward TYPE_SET_SCREEN_POWER_MODE: mode=${mode}, bytes=[${Array.from(event.data).join(',')}]`,
+            );
+        }
         if (this.remoteSocket) {
             this.remoteSocket.send(event.data);
         } else {

@@ -37,6 +37,8 @@ export class ApplMjpegMoreBox extends ApplMoreBox {
         const framerateInput = document.createElement('input');
         framerateInput.placeholder = `1 .. 60`;
         framerateInput.value = `${defaultOptions.mjpegServerFramerate}`;
+        framerateInput.id = `mjpeg_framerate_${udid}_${playerName}`;
+        framerateLabel.htmlFor = framerateInput.id;
         ApplMjpegMoreBox.wrap('div', [framerateLabel, framerateInput], innerDiv);
         this.framerateInput = framerateInput;
 
@@ -45,6 +47,8 @@ export class ApplMjpegMoreBox extends ApplMoreBox {
         const scalingFactorInput = document.createElement('input');
         scalingFactorInput.placeholder = `1 .. 100`;
         scalingFactorInput.value = `${defaultOptions.mjpegScalingFactor}`;
+        scalingFactorInput.id = `mjpeg_scaling_factor_${udid}_${playerName}`;
+        scalingFactorLabel.htmlFor = scalingFactorInput.id;
         const scalingWrapper = ApplMjpegMoreBox.wrap('div', [scalingFactorLabel, scalingFactorInput], innerDiv);
         // FIXME: scaling factor changes are not handled
         scalingWrapper.style.display = 'none';
@@ -55,6 +59,8 @@ export class ApplMjpegMoreBox extends ApplMoreBox {
         const qualityInput = document.createElement('input');
         qualityInput.placeholder = `1 .. 100`;
         qualityInput.value = `${defaultOptions.mjpegServerScreenshotQuality}`;
+        qualityInput.id = `mjpeg_quality_${udid}_${playerName}`;
+        qualityLabel.htmlFor = qualityInput.id;
         ApplMjpegMoreBox.wrap('div', [qualityLabel, qualityInput], innerDiv);
         this.qualityInput = qualityInput;
         innerDiv.appendChild(btn);

@@ -59,7 +59,7 @@ export class ApplToolBox extends ToolBox {
 
         if (moreBox) {
             const more = new ToolBoxCheckbox('More', SvgImage.Icon.MORE, `show_more_${udid}_${playerName}`);
-            more.addEventListener('click', (_, el) => {
+            more.addEventListener('change', (_, el) => {
                 const element = el.getElement();
                 moreBox.style.display = element.checked ? 'block' : 'none';
             });

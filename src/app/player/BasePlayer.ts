@@ -30,6 +30,7 @@ export interface PlayerEvents {
     'video-view-resize': Size;
     'input-video-resize': ScreenInfo;
     'video-settings': VideoSettings;
+    'video-presented': { ptsUs: number; nowUs: number };
 }
 
 export interface PlayerClass {
@@ -323,7 +324,7 @@ export abstract class BasePlayer extends TypedEmitter<PlayerEvents> {
         return this.state;
     }
 
-    public pushFrame(frame: Uint8Array): void {
+    public pushFrame(frame: Uint8Array, _ptsUs?: number): void {
         if (!this.receivedFirstFrame) {
             this.receivedFirstFrame = true;
             if (typeof this.qualityAnimationId !== 'number') {
@@ -383,14 +384,35 @@ export abstract class BasePlayer extends TypedEmitter<PlayerEvents> {
         this.receivedFirstFrame = false;
         this.screenInfo = screenInfo;
         const { width, height } = screenInfo.videoSize;
+        // const dpr = window.devicePixelRatio || 1;
         this.touchableCanvas.width = width;
         this.touchableCanvas.height = height;
-        if (this.parentElement) {
-            this.parentElement.style.height = `${height}px`;
-            this.parentElement.style.width = `${width}px`;
+        this.setViewSize(width, height);
+    }
+
+    public setViewSize(width: number, height: number): void {
+        const dpr = window.devicePixelRatio || 1;
+        const cssWidth = `${width / dpr}px`;
+        const cssHeight = `${height / dpr}px`;
+        const unchanged =
+            this.touchableCanvas.style.width === cssWidth &&
+            this.touchableCanvas.style.height === cssHeight &&
+            this.tag.style.width === cssWidth &&
+            this.tag.style.height === cssHeight &&
+            (!this.parentElement ||
+                (this.parentElement.style.width === cssWidth && this.parentElement.style.height === cssHeight));
+        if (unchanged) {
+            return;
         }
-        const size = new Size(width, height);
-        this.emit('video-view-resize', size);
+        this.touchableCanvas.style.width = cssWidth;
+        this.touchableCanvas.style.height = cssHeight;
+        this.tag.style.width = cssWidth;
+        this.tag.style.height = cssHeight;
+        if (this.parentElement) {
+            this.parentElement.style.height = cssHeight;
+            this.parentElement.style.width = cssWidth;
+        }
+        this.emit('video-view-resize', new Size(width, height));
     }
 
     public getName(): string {

@@ -23,6 +23,7 @@ export class ApplMoreBox {
         moreBox.appendChild(nameBox);
         const input = document.createElement('textarea');
         input.classList.add('text-area');
+        input.id = `text_input_${udid}_${playerName}`;
         const sendButton = document.createElement('button');
         sendButton.innerText = 'Send as keys';
 

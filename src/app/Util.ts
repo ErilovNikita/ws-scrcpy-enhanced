@@ -216,4 +216,295 @@ export default class Util {
     static setImmediate(fn: () => any): void {
         Promise.resolve().then(fn);
     }
+
+    public static bindFormStateToLocalStorage(
+        root: ParentNode,
+        prefix: string,
+        options?: {
+            dispatchOnRestore?: boolean;
+            debounceMs?: number;
+            restoreMode?: 'direct' | 'simulate';
+            deferRestore?: boolean;
+        },
+    ): { restore: () => void; dispose: () => void } {
+        if (!window.localStorage) {
+            return { restore: () => {}, dispose: () => {} };
+        }
+        const dispatchOnRestore = options?.dispatchOnRestore ?? true;
+        const debounceMs = options?.debounceMs ?? 150;
+        const restoreMode = options?.restoreMode ?? 'simulate';
+        const deferRestore = options?.deferRestore ?? false;
+        const bound = new WeakSet<Element>();
+        const handlers = new WeakMap<
+            Element,
+            { onInput?: (event: Event) => void; onChange?: (event: Event) => void }
+        >();
+        const timeouts = new WeakMap<Element, number>();
+        const pendingRestore = new WeakMap<Element, string>();
+        let restored = false;
+
+        const getStorageKey = (element: Element): string | null => {
+            const el = element as HTMLElement;
+            const dataKey = el.dataset ? el.dataset.persistKey : undefined;
+            const id = el.id;
+            const name = (element as HTMLInputElement).name;
+            const key = dataKey || id || name;
+            if (!key) {
+                return null;
+            }
+            return `${prefix}::${key}`;
+        };
+
+        const shouldSkipRestore = (element: Element): boolean => {
+            const el = element as HTMLElement;
+            const raw = el.dataset ? el.dataset.persistSkipRestore : undefined;
+            if (!raw) {
+                return false;
+            }
+            return raw === '1' || raw.toLowerCase() === 'true';
+        };
+
+        const writeValue = (element: Element): void => {
+            const key = getStorageKey(element);
+            if (!key) {
+                return;
+            }
+            try {
+                if (element instanceof HTMLInputElement) {
+                    if (element.type === 'checkbox') {
+                        window.localStorage.setItem(key, element.checked ? 'true' : 'false');
+                        return;
+                    }
+                    if (element.type === 'radio') {
+                        if (element.checked) {
+                            window.localStorage.setItem(key, element.value);
+                        }
+                        return;
+                    }
+                    window.localStorage.setItem(key, element.value);
+                    return;
+                }
+                if (element instanceof HTMLSelectElement || element instanceof HTMLTextAreaElement) {
+                    window.localStorage.setItem(key, element.value);
+                }
+            } catch (error: any) {}
+        };
+
+        const readSavedRaw = (element: Element): string | null => {
+            const key = getStorageKey(element);
+            if (!key) {
+                return null;
+            }
+            let raw: string | null = null;
+            try {
+                raw = window.localStorage.getItem(key);
+            } catch (error: any) {
+                raw = null;
+            }
+            return raw;
+        };
+
+        const applyRestore = (element: Element, raw: string): void => {
+            if (restoreMode === 'simulate') {
+                if (element instanceof HTMLInputElement) {
+                    if (element.type === 'checkbox') {
+                        const desired = raw === 'true' || raw === '1';
+                        if (element.checked !== desired) {
+                            element.click();
+                        }
+                        return;
+                    }
+                    if (element.type === 'radio') {
+                        const desired = raw === element.value;
+                        if (element.checked !== desired) {
+                            element.click();
+                        }
+                        return;
+                    }
+                    if (element.value !== raw) {
+                        element.value = raw;
+                    }
+                } else if (element instanceof HTMLSelectElement || element instanceof HTMLTextAreaElement) {
+                    if (element.value !== raw) {
+                        element.value = raw;
+                    }
+                } else {
+                    return;
+                }
+                if (!dispatchOnRestore) {
+                    return;
+                }
+                const shouldChange =
+                    element instanceof HTMLSelectElement ||
+                    (element instanceof HTMLInputElement &&
+                        (element.type === 'checkbox' || element.type === 'radio'));
+                const eventType: 'input' | 'change' = shouldChange ? 'change' : 'input';
+                Util.setImmediate(() => {
+                    element.dispatchEvent(new Event(eventType, { bubbles: true }));
+                    if (eventType === 'input') {
+                        element.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                });
+                return;
+            }
+
+            if (element instanceof HTMLInputElement) {
+                if (element.type === 'checkbox') {
+                    element.checked = raw === 'true' || raw === '1';
+                } else if (element.type === 'radio') {
+                    element.checked = raw === element.value;
+                } else {
+                    element.value = raw;
+                }
+            } else if (element instanceof HTMLSelectElement || element instanceof HTMLTextAreaElement) {
+                element.value = raw;
+            }
+            if (!dispatchOnRestore) {
+                return;
+            }
+            let eventType: 'input' | 'change' = 'input';
+            if (element instanceof HTMLSelectElement) {
+                eventType = 'change';
+            } else if (element instanceof HTMLInputElement && (element.type === 'checkbox' || element.type === 'radio')) {
+                eventType = 'change';
+            }
+            Util.setImmediate(() => {
+                element.dispatchEvent(new Event(eventType, { bubbles: true }));
+            });
+        };
+
+        const restoreValue = (element: Element): void => {
+            if (shouldSkipRestore(element)) {
+                return;
+            }
+            const raw = readSavedRaw(element);
+            if (raw === null) {
+                return;
+            }
+            applyRestore(element, raw);
+        };
+
+        const bindElement = (element: Element): void => {
+            if (bound.has(element)) {
+                return;
+            }
+            bound.add(element);
+            if (deferRestore && !restored) {
+                if (!shouldSkipRestore(element)) {
+                    const raw = readSavedRaw(element);
+                    if (raw !== null) {
+                        pendingRestore.set(element, raw);
+                    }
+                }
+            } else {
+                restoreValue(element);
+            }
+            const onInput = (event: Event): void => {
+                const target = event.currentTarget as Element;
+                const prior = timeouts.get(target);
+                if (typeof prior === 'number') {
+                    clearTimeout(prior);
+                }
+                const timeoutId = window.setTimeout(() => {
+                    writeValue(target);
+                }, debounceMs);
+                timeouts.set(target, timeoutId);
+            };
+            const onChange = (event: Event): void => {
+                const target = event.currentTarget as Element;
+                writeValue(target);
+            };
+            const entry: { onInput?: (event: Event) => void; onChange?: (event: Event) => void } = {};
+            if (element instanceof HTMLSelectElement) {
+                element.addEventListener('change', onChange);
+                entry.onChange = onChange;
+            } else if (element instanceof HTMLInputElement) {
+                if (element.type === 'checkbox' || element.type === 'radio') {
+                    element.addEventListener('change', onChange);
+                    entry.onChange = onChange;
+                } else {
+                    element.addEventListener('input', onInput);
+                    element.addEventListener('change', onChange);
+                    entry.onInput = onInput;
+                    entry.onChange = onChange;
+                }
+            } else if (element instanceof HTMLTextAreaElement) {
+                element.addEventListener('input', onInput);
+                element.addEventListener('change', onChange);
+                entry.onInput = onInput;
+                entry.onChange = onChange;
+            }
+            handlers.set(element, entry);
+        };
+
+        const scan = (parent: ParentNode): void => {
+            const nodes = parent.querySelectorAll ? parent.querySelectorAll('input, select, textarea') : [];
+            nodes.forEach((node) => {
+                bindElement(node);
+            });
+        };
+
+        scan(root);
+        let observer: MutationObserver | undefined;
+        if (typeof MutationObserver !== 'undefined' && root instanceof HTMLElement) {
+            observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    mutation.addedNodes.forEach((node) => {
+                        if (!(node instanceof HTMLElement)) {
+                            return;
+                        }
+                        scan(node);
+                    });
+                });
+            });
+            observer.observe(root, { childList: true, subtree: true });
+        }
+
+        const restore = (): void => {
+            if (restored) {
+                return;
+            }
+            restored = true;
+            if (!root.querySelectorAll) {
+                return;
+            }
+            root.querySelectorAll('input, select, textarea').forEach((element) => {
+                if (shouldSkipRestore(element)) {
+                    return;
+                }
+                const raw = pendingRestore.get(element);
+                if (typeof raw === 'string') {
+                    pendingRestore.delete(element);
+                    applyRestore(element, raw);
+                } else {
+                    restoreValue(element);
+                }
+            });
+        };
+
+        const dispose = (): void => {
+            if (observer) {
+                observer.disconnect();
+                observer = undefined;
+            }
+            if (!root.querySelectorAll) {
+                return;
+            }
+            root.querySelectorAll('input, select, textarea').forEach((element) => {
+                const entry = handlers.get(element);
+                if (!entry) {
+                    return;
+                }
+                if (entry.onInput) {
+                    element.removeEventListener('input', entry.onInput);
+                }
+                if (entry.onChange) {
+                    element.removeEventListener('change', entry.onChange);
+                }
+                handlers.delete(element);
+            });
+        };
+
+        return { restore, dispose };
+    }
 }

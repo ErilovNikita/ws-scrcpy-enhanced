@@ -84,7 +84,16 @@ export class AdbkitFilePushStream extends FilePushStream {
         channel.send(CommandControlMessage.createPushFileCommand(newParams).toBuffer());
     }
 
-    public sendEventStart({ id, fileName, fileSize }: { id: number; fileName: string; fileSize: number }): void {
+    public sendEventStart({
+        id,
+        fileName,
+        fileSize,
+    }: {
+        id: number;
+        fileName: string;
+        fileSize: number;
+        destinationDir?: string;
+    }): void {
         const filePath = path.join(this.fileListingClient.getPath(), fileName);
         const startParams = { id, fileName: filePath, fileSize, state: FilePushState.START };
         const channel = this.getChannel(id);

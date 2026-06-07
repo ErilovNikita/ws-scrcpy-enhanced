@@ -102,6 +102,8 @@ export abstract class StreamClient<T extends ParamsStream> extends BaseClient<T,
     protected deviceView?: HTMLDivElement;
     protected moreBox?: HTMLElement;
     protected player?: BasePlayer;
+    private uiStateBinding?: { restore: () => void; dispose: () => void };
+    private uiStateRestored = false;
 
     protected constructor(params: T) {
         super(params);
@@ -176,6 +178,9 @@ export abstract class StreamClient<T extends ParamsStream> extends BaseClient<T,
         if (ev && ev instanceof Event && ev.type === 'error') {
             console.error(TAG, ev);
         }
+        this.uiStateBinding?.dispose();
+        this.uiStateBinding = undefined;
+        this.uiStateRestored = false;
         if (this.deviceView) {
             const parent = this.deviceView.parentElement;
             if (parent) {
@@ -196,6 +201,10 @@ export abstract class StreamClient<T extends ParamsStream> extends BaseClient<T,
         // TODO: use proper notification instead of `cursor: wait`
         if (status === WdaStatus.STARTED || status === WdaStatus.STOPPED) {
             this.videoWrapper.classList.remove(WAIT_CLASS);
+            if (status === WdaStatus.STARTED && this.uiStateBinding && !this.uiStateRestored) {
+                this.uiStateRestored = true;
+                this.uiStateBinding.restore();
+            }
         } else {
             this.videoWrapper.classList.add(WAIT_CLASS);
         }
@@ -234,6 +243,12 @@ export abstract class StreamClient<T extends ParamsStream> extends BaseClient<T,
         player.on('input-video-resize', this.onInputVideoResize);
 
         document.body.appendChild(deviceView);
+        this.uiStateBinding?.dispose();
+        this.uiStateBinding = Util.bindFormStateToLocalStorage(deviceView, 'ws-scrcpy:ui-state:v1', {
+            deferRestore: true,
+            restoreMode: 'simulate',
+        });
+        this.uiStateRestored = false;
         const bounds = this.getMaxSize(controlButtons);
         if (bounds) {
             player.setBounds(bounds);

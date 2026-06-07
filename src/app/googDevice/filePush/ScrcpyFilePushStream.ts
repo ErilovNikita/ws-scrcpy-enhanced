@@ -3,9 +3,6 @@ import { StreamReceiverScrcpy } from '../client/StreamReceiverScrcpy';
 import DeviceMessage from '../DeviceMessage';
 import { CommandControlMessage, FilePushState } from '../../controlMessage/CommandControlMessage';
 
-const ALLOWED_TYPES = ['application/vnd.android.package-archive'];
-const ALLOWED_NAME_RE = /\.apk$/i;
-
 export class ScrcpyFilePushStream extends FilePushStream {
     constructor(private readonly streamReceiver: StreamReceiverScrcpy) {
         super();
@@ -15,9 +12,8 @@ export class ScrcpyFilePushStream extends FilePushStream {
         return this.streamReceiver.hasConnection();
     }
 
-    public isAllowedFile(file: File): boolean {
-        const { type, name } = file;
-        return (type && ALLOWED_TYPES.includes(type)) || (!type && ALLOWED_NAME_RE.test(name));
+    public isAllowedFile(): boolean {
+        return true;
     }
 
     public sendEventAppend({ id, chunk }: { id: number; chunk: Uint8Array }): void {
@@ -35,8 +31,18 @@ export class ScrcpyFilePushStream extends FilePushStream {
         this.streamReceiver.sendEvent(CommandControlMessage.createPushFileCommand(newParams));
     }
 
-    public sendEventStart({ id, fileName, fileSize }: { id: number; fileName: string; fileSize: number }): void {
-        const startParams = { id, fileName, fileSize, state: FilePushState.START };
+    public sendEventStart({
+        id,
+        fileName,
+        fileSize,
+        destinationDir,
+    }: {
+        id: number;
+        fileName: string;
+        fileSize: number;
+        destinationDir?: string;
+    }): void {
+        const startParams = { id, fileName, fileSize, destinationDir, state: FilePushState.START };
         this.streamReceiver.sendEvent(CommandControlMessage.createPushFileCommand(startParams));
     }
 

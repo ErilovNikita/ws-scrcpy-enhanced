@@ -7,6 +7,7 @@ type DecodedFrame = {
     width: number;
     height: number;
     frame: any;
+    ptsUs: number;
 };
 
 interface CanvasDecoder {
@@ -14,11 +15,12 @@ interface CanvasDecoder {
 }
 
 export abstract class BaseCanvasBasedPlayer extends BasePlayer {
-    protected framesList: Uint8Array[] = [];
+    protected framesList: Array<{ frame: Uint8Array; ptsUs: number }> = [];
     protected decodedFrames: DecodedFrame[] = [];
     protected videoStats: PlaybackQuality[] = [];
     protected animationFrameId?: number;
     protected canvas?: CanvasDecoder;
+    private decodePtsQueue: number[] = [];
 
     public static hasWebGLSupport(): boolean {
         // For some reason if I use here `this.tag` image on canvas will be flattened
@@ -56,7 +58,7 @@ export abstract class BaseCanvasBasedPlayer extends BasePlayer {
         super(udid, displayInfo, name, storageKeyPrefix, tag);
     }
 
-    protected abstract decode(data: Uint8Array): void;
+    protected abstract decode(data: Uint8Array, ptsUs: number): void;
     public abstract getPreferredVideoSetting(): VideoSettings;
 
     protected drawDecoded = (): void => {
@@ -66,8 +68,11 @@ export abstract class BaseCanvasBasedPlayer extends BasePlayer {
         if (this.receivedFirstFrame) {
             const data = this.decodedFrames.shift();
             if (data) {
-                const { frame, width, height } = data;
+                const { frame, width, height, ptsUs } = data;
                 this.canvas.decode(frame, width, height);
+                if (ptsUs > 0) {
+                    this.emit('video-presented', { ptsUs, nowUs: performance.now() * 1000 });
+                }
             }
         }
         if (this.decodedFrames.length) {
@@ -77,7 +82,7 @@ export abstract class BaseCanvasBasedPlayer extends BasePlayer {
         }
     };
 
-    protected onFrameDecoded(width: number, height: number, frame: any): void {
+    protected onFrameDecoded(width: number, height: number, frame: any, ptsUs?: number): void {
         if (!this.receivedFirstFrame) {
             // decoded frame with previous video settings
             return;
@@ -92,7 +97,8 @@ export abstract class BaseCanvasBasedPlayer extends BasePlayer {
                 dropped++;
             }
         }
-        this.decodedFrames.push({ width, height, frame });
+        const resolvedPtsUs = typeof ptsUs === 'number' ? ptsUs : this.decodePtsQueue.shift() || 0;
+        this.decodedFrames.push({ width, height, frame, ptsUs: resolvedPtsUs });
         this.videoStats.push({
             decodedFrames: 1,
             droppedFrames: dropped,
@@ -115,7 +121,8 @@ export abstract class BaseCanvasBasedPlayer extends BasePlayer {
         }
         const first = this.framesList.shift();
         if (first) {
-            this.decode(first);
+            this.decodePtsQueue.push(first.ptsUs);
+            this.decode(first.frame, first.ptsUs);
         }
     }
 
@@ -202,20 +209,22 @@ export abstract class BaseCanvasBasedPlayer extends BasePlayer {
         const { width, height } = screenInfo.videoSize;
         this.initCanvas(width, height);
         this.framesList = [];
+        this.decodePtsQueue.length = 0;
         if (this.animationFrameId) {
             cancelAnimationFrame(this.animationFrameId);
             this.animationFrameId = undefined;
         }
     }
 
-    public pushFrame(frame: Uint8Array): void {
-        super.pushFrame(frame);
+    public pushFrame(frame: Uint8Array, ptsUs?: number): void {
+        super.pushFrame(frame, ptsUs);
         if (BasePlayer.isIFrame(frame)) {
             if (this.videoSettings) {
                 const { maxFps } = this.videoSettings;
                 if (this.framesList.length > maxFps / 2) {
                     const dropped = this.framesList.length;
                     this.framesList = [];
+                    this.decodePtsQueue.length = 0;
                     this.videoStats.push({
                         decodedFrames: 0,
                         droppedFrames: dropped,
@@ -226,11 +235,12 @@ export abstract class BaseCanvasBasedPlayer extends BasePlayer {
                 }
             }
         }
-        this.framesList.push(frame);
+        this.framesList.push({ frame, ptsUs: typeof ptsUs === 'number' ? ptsUs : 0 });
         this.shiftFrame();
     }
 
     protected clearState(): void {
         this.framesList = [];
+        this.decodePtsQueue.length = 0;
     }
 }

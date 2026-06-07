@@ -88,7 +88,7 @@ export class WebCodecsPlayer extends BaseCanvasBasedPlayer {
     private createDecoder(): VideoDecoder {
         return new VideoDecoder({
             output: (frame) => {
-                this.onFrameDecoded(0, 0, frame);
+                this.onFrameDecoded(0, 0, frame, frame.timestamp);
             },
             error: (error: DOMException) => {
                 console.error(error, `code: ${error.code}`);
@@ -98,16 +98,18 @@ export class WebCodecsPlayer extends BaseCanvasBasedPlayer {
     }
 
     protected addToBuffer(data: Uint8Array): Uint8Array {
-        let array: Uint8Array;
-        if (this.buffer) {
-            array = new Uint8Array(this.buffer.byteLength + data.byteLength);
-            array.set(new Uint8Array(this.buffer));
-            array.set(new Uint8Array(data), this.buffer.byteLength);
-        } else {
-            array = data;
+        if (!this.buffer) {
+            const array = new Uint8Array(data.length);
+            array.set(data);
+            this.buffer = array.buffer as ArrayBuffer;
+            return array;
         }
-        this.buffer = array.buffer;
-        return array;
+        const oldArray = new Uint8Array(this.buffer);
+        const newArray = new Uint8Array(oldArray.length + data.length);
+        newArray.set(oldArray);
+        newArray.set(data, oldArray.length);
+        this.buffer = newArray.buffer as ArrayBuffer;
+        return newArray;
     }
 
     protected scaleCanvas(width: number, height: number): void {
@@ -132,7 +134,7 @@ export class WebCodecsPlayer extends BaseCanvasBasedPlayer {
         this.tag.style.transformOrigin = 'top left';
     }
 
-    protected decode(data: Uint8Array): void {
+    protected decode(data: Uint8Array, ptsUs: number): void {
         if (!data || data.length < 4) {
             return;
         }
@@ -170,7 +172,7 @@ export class WebCodecsPlayer extends BaseCanvasBasedPlayer {
             this.decoder.decode(
                 new EncodedVideoChunk({
                     type: 'key',
-                    timestamp: 0,
+                    timestamp: ptsUs || 0,
                     data: array.buffer,
                 }),
             );
@@ -185,6 +187,9 @@ export class WebCodecsPlayer extends BaseCanvasBasedPlayer {
                 const frame: VideoFrame = data.frame;
                 this.context.drawImage(frame, 0, 0);
                 frame.close();
+                if (data.ptsUs > 0) {
+                    this.emit('video-presented', { ptsUs: data.ptsUs, nowUs: performance.now() * 1000 });
+                }
             }
         }
         if (this.decodedFrames.length) {

@@ -59,8 +59,8 @@ export class RemoteShell extends Mw {
         const send = USE_BINARY ? this.bufferUtf8(5) : this.buffer(5);
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore Documentation is incorrect for `encoding: null`
-        term.on('data', send);
-        term.on('exit', (code: number) => {
+        (term as any).onData(send);
+        (term as any).onExit((code: number) => {
             if (code === 0) {
                 this.closeCode = 1000;
             } else {

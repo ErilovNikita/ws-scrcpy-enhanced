@@ -1,6 +1,10 @@
 .text-area {
-    width: 100%;
+    width: 90%;
     resize: vertical;
+}
+
+input:not([type="checkbox"]) {
+    width: 90%;
 }
 
 .more-box {
@@ -9,6 +13,9 @@
     background-color: var(--controls-bg-color);
     z-index: 2;
     padding: 0 .714rem .714rem .714rem;
+    max-height: 80vh;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .text-with-shadow, .more-box label {

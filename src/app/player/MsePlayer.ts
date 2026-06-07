@@ -293,8 +293,8 @@ export class MsePlayer extends BasePlayer {
         this.sourceBuffer.removeEventListener('updateend', this.jumpToEnd);
     };
 
-    public pushFrame(frame: Uint8Array): void {
-        super.pushFrame(frame);
+    public pushFrame(frame: Uint8Array, ptsUs?: number): void {
+        super.pushFrame(frame, ptsUs);
         if (!this.checkForIFrame(frame)) {
             this.frames.push(frame);
         } else {

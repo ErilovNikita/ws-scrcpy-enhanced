@@ -99,6 +99,7 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
             }
         }
         const action = ACTION.STREAM_SCRCPY;
+        const webrtcAction = ACTION.STREAM_WEBRTC;
         playerTds.forEach((item) => {
             item.innerHTML = '';
             const playerFullName = item.getAttribute(DeviceTracker.AttributePlayerFullName);
@@ -117,6 +118,20 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
                 this.params,
             );
             item.appendChild(link);
+            const separator = document.createElement('span');
+            separator.innerText = ' / ';
+            item.appendChild(separator);
+            const webrtcLink = DeviceTracker.buildLink(
+                {
+                    action: webrtcAction,
+                    udid,
+                    player: decodeURIComponent(playerCodeName),
+                    ws: url,
+                },
+                'WebRTC',
+                this.params,
+            );
+            item.appendChild(webrtcLink);
         });
     }
 

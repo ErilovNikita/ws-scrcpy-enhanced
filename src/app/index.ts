@@ -1,5 +1,6 @@
 import '../style/app.css';
 import { StreamClientScrcpy } from './googDevice/client/StreamClientScrcpy';
+import { StreamClientWebRTC } from './googDevice/client/StreamClientWebRTC';
 import { HostTracker } from './client/HostTracker';
 import { Tool } from './client/Tool';
 
@@ -30,6 +31,10 @@ window.onload = async function (): Promise<void> {
 
     if (action === StreamClientScrcpy.ACTION && typeof parsedQuery.get('udid') === 'string') {
         StreamClientScrcpy.start(parsedQuery);
+        return;
+    }
+    if (action === StreamClientWebRTC.ACTION && typeof parsedQuery.get('udid') === 'string') {
+        StreamClientWebRTC.start(parsedQuery);
         return;
     }
 
