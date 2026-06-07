@@ -1,6 +1,21 @@
-# ws scrcpy
+# ws scrcpy enhanced
 
-Web client for [Genymobile/scrcpy][scrcpy] and more.
+An enhanced version of [NetrisTV/ws-scrcpy](https://github.com/NetrisTV/ws-scrcpy). Adds notable features such as **audio support** and full-screen mode. Updates `scrcpy-server.jar` to a newer version (3.3.4), and makes phone-to-phone control more usable.
+
+## What's New?
+
+* **Audio casting is supported.**
+* Full-screen mode is supported.
+* Allows hiding the sidebar on the right. (May allow for a larger view area on mobile devices.)
+* Added WebRTC support. (Only in ADB proxy mode. May have bugs; not recommended.)
+* Optimized some UI logic.
+* Updated `scrcpy-server.jar` to 3.3.4. (Its source code will be published sooner.)
+* Allows file uploads of any format, to any destination directory.
+
+## What's Fixed?
+
+* Fixed an issue where "screen power mode controlling" was not working.
+* Fixed an issue where controlling another phone from a phone was too blurry.
 
 ## Requirements
 
@@ -9,6 +24,7 @@ Browser must support the following technologies:
 * Media Source Extensions and h264 decoding;
 * WebWorkers
 * WebAssembly
+* WebRTC (optional)
 
 Server:
 * Node.js v10+
@@ -28,12 +44,8 @@ Make sure you have installed [node.js](https://nodejs.org/en/download/),
 [node-gyp](https://github.com/nodejs/node-gyp) and
 [build tools](https://github.com/nodejs/node-gyp#installation)
 ```shell
-git clone https://github.com/NetrisTV/ws-scrcpy.git
-cd ws-scrcpy
-
-## For stable version find latest tag and switch to it:
-# git tag -l
-# git checkout vX.Y.Z
+git clone https://github.com/Mel0nFish/ws-scrcpy-enhanced.git
+cd ws-scrcpy-enhanced
 
 npm install
 npm start
@@ -86,9 +98,10 @@ current point
 * Injecting text (ASCII only)
 * Copy to/from device clipboard
 * Device "rotation"
+* Audio casting supported
 
 #### File push
-Drag & drop an APK file to push it to the `/data/local/tmp` directory. You can
+Drag & drop a file to push it to the specified directory. You can
 install it manually from the included [xtermjs/xterm.js][xterm.js] terminal
 emulator (see below).
 
@@ -174,6 +187,8 @@ available from the outside. Select `proxy over adb` from the interfaces list.
 * MsePlayer reports too many dropped frames in quality statistics: needs
 further investigation.
 * On Safari file upload does not show progress (it works in one piece).
+* WebRTC mode may have some problems, and may not work on all devices.
+* Behavior of `scrcpy-server.jar` may become abnormal in some cases due to a large version gap.
 
 ## Security warning
 Be advised and keep in mind:
@@ -184,8 +199,10 @@ Be advised and keep in mind:
 for connections on all network interfaces (see [custom build](#custom-build)).
 * The modified version of scrcpy will keep running after the last client
 disconnected.
+* It allows file uploads of any format to any destination, which may result in file overwriting.
 
 ## Related projects
+* [ws-scrcpy](https://github.com/NetrisTV/ws-scrcpy)
 * [Genymobile/scrcpy][scrcpy]
 * [xevokk/h264-converter][xevokk/h264-converter]
 * [131/h264-live-player][h264-live-player]
@@ -197,9 +214,15 @@ disconnected.
 
 ## scrcpy websocket fork
 
-Currently, support of WebSocket protocol added to v1.19 of scrcpy
+The modified scrcpy used by this enhanced version will be published sooner.
 * [Prebuilt package](/vendor/Genymobile/scrcpy/scrcpy-server.jar)
+And here is the original ws-scrcpy modified scrcpy(1.19) source code:
 * [Source code][fork]
+
+## Additional notes
+
+This project is a modified version of [NetrisTV's ws-scrcpy](https://github.com/NetrisTV/ws-scrcpy) project. Some codes were written by AI tools.
+
 
 [fork]: https://github.com/NetrisTV/scrcpy/tree/feature/websocket-v1.19.x
 
