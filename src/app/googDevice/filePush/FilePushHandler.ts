@@ -29,6 +29,7 @@ const TAG = '[FilePushHandler]';
 
 export default class FilePushHandler implements DragEventListener {
     public static readonly REQUEST_NEW_PUSH_ID = 0; // ignored on server, when state is `NEW_PUSH_ID`
+    private static readonly MAX_APPEND_CHUNK_BYTES = 60 * 1024;
 
     private responseWaiter: Map<number, Resolve | Resolve[]> = new Map();
     private listeners: Set<DragAndPushListener> = new Set();
@@ -107,43 +108,50 @@ export default class FilePushHandler implements DragEventListener {
         }
         let receivedBytes = 0;
 
-        const processData = async ({ done, value }: { done: boolean; value?: Uint8Array }): Promise<void> => {
-            if (done || !value) {
-                this.filePushStream.sendEventFinish({ id: pushId });
-                const { code: finishResponseCode } = await this.waitForResponse(pushId);
-                if (finishResponseCode !== 0) {
-                    this.logError(pushId, fileName, finishResponseCode);
-                } else {
-                    this.sendUpdate({
-                        pushId,
-                        fileName,
-                        message: 'success!',
-                        progress: 100,
-                        error: false,
-                        finished: true,
-                    });
+        let readResult = result;
+        while (!readResult.done) {
+            const value = readResult.value;
+            if (!value || !value.byteLength) {
+                readResult = await reader.read();
+                continue;
+            }
+
+            for (
+                let offset = 0;
+                offset < value.byteLength;
+                offset += FilePushHandler.MAX_APPEND_CHUNK_BYTES
+            ) {
+                const chunk = value.subarray(offset, offset + FilePushHandler.MAX_APPEND_CHUNK_BYTES);
+                this.filePushStream.sendEventAppend({ id: pushId, chunk });
+                const { code: appendResponseCode } = await this.waitForResponse(pushId);
+                if (appendResponseCode !== 0) {
+                    this.logError(pushId, fileName, appendResponseCode);
+                    return;
                 }
-                console.log(TAG, `File "${fileName}" uploaded in ${Date.now() - start}ms`);
-                return;
+                receivedBytes += chunk.byteLength;
+                const progress = (receivedBytes * 100) / fileSize;
+                const message = `${progress.toFixed(2)}%`;
+                this.sendUpdate({ pushId, fileName, message, progress, error: false, finished: false });
             }
 
-            receivedBytes += value.length;
-            this.filePushStream.sendEventAppend({ id: pushId, chunk: value });
+            readResult = await reader.read();
+        }
 
-            const [{ code: appendResponseCode }, result] = await Promise.all([
-                this.waitForResponse(pushId),
-                reader.read(),
-            ]);
-            if (appendResponseCode !== 0) {
-                this.logError(pushId, fileName, appendResponseCode);
-                return;
-            }
-            const progress = (receivedBytes * 100) / fileSize;
-            const message = `${progress.toFixed(2)}%`;
-            this.sendUpdate({ pushId, fileName, message, progress, error: false, finished: false });
-            return processData(result);
-        };
-        return processData(result);
+        this.filePushStream.sendEventFinish({ id: pushId });
+        const { code: finishResponseCode } = await this.waitForResponse(pushId);
+        if (finishResponseCode !== 0) {
+            this.logError(pushId, fileName, finishResponseCode);
+        } else {
+            this.sendUpdate({
+                pushId,
+                fileName,
+                message: 'success!',
+                progress: 100,
+                error: false,
+                finished: true,
+            });
+        }
+        console.log(TAG, `File "${fileName}" uploaded in ${Date.now() - start}ms`);
     }
 
     private waitForResponse(pushId: number): Promise<PushResponse> {

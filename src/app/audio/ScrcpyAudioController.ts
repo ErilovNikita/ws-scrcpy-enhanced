@@ -438,6 +438,9 @@ export class ScrcpyAudioController {
 
     private ws?: WebSocket;
     private enabled = false;
+    private reconnectAttempt = 0;
+    private reconnectTimer?: number;
+    private reconnectBound = false;
     private options: ScrcpyAudioOptions = normalizeAudioOptions({ frameMode: 'combined', channels: 1, bitrate: 64_000 });
     private sessionId = 0;
     private state: 'initial' | 'meta' | 'packet' = 'initial';
@@ -459,20 +462,40 @@ export class ScrcpyAudioController {
     private nextStartTime = 0;
     private workletNode?: AudioWorkletNode;
     private workletModuleUrl?: string;
+    private readonly onWindowFocus = (): void => {
+        this.tryReconnect(true);
+    };
+    private readonly onVisibilityChange = (): void => {
+        if (typeof document !== 'undefined' && document.hidden) {
+            return;
+        }
+        this.tryReconnect(true);
+    };
+    private readonly onOnline = (): void => {
+        this.tryReconnect(true);
+    };
+    private stopWithReconnect(): void {
+        this.stop();
+        this.scheduleReconnect();
+    }
 
     constructor(private readonly params: ParamsStreamScrcpy) {}
 
     public setEnabled(enabled: boolean): void {
         this.enabled = enabled;
         if (!enabled) {
+            this.unbindReconnectEvents();
             this.stop();
+            this.reconnectAttempt = 0;
             return;
         }
         if (!ScrcpyAudioController.isSupported()) {
             return;
         }
+        this.bindReconnectEvents();
         this.start().catch((_e: unknown) => {
             this.stop();
+            this.scheduleReconnect();
         });
     }
 
@@ -489,6 +512,91 @@ export class ScrcpyAudioController {
         this.stop();
         this.start().catch((_e: unknown) => {
             this.stop();
+            this.scheduleReconnect();
+        });
+    }
+
+    private bindReconnectEvents(): void {
+        if (this.reconnectBound) {
+            return;
+        }
+        this.reconnectBound = true;
+        if (typeof window !== 'undefined') {
+            window.addEventListener('focus', this.onWindowFocus);
+            window.addEventListener('online', this.onOnline);
+        }
+        if (typeof document !== 'undefined') {
+            document.addEventListener('visibilitychange', this.onVisibilityChange);
+        }
+    }
+
+    private unbindReconnectEvents(): void {
+        if (!this.reconnectBound) {
+            return;
+        }
+        this.reconnectBound = false;
+        if (typeof window !== 'undefined') {
+            window.removeEventListener('focus', this.onWindowFocus);
+            window.removeEventListener('online', this.onOnline);
+        }
+        if (typeof document !== 'undefined') {
+            document.removeEventListener('visibilitychange', this.onVisibilityChange);
+        }
+        if (typeof this.reconnectTimer === 'number') {
+            window.clearTimeout(this.reconnectTimer);
+            this.reconnectTimer = undefined;
+        }
+    }
+
+    private scheduleReconnect(): void {
+        if (!this.enabled) {
+            return;
+        }
+        if (typeof window === 'undefined') {
+            return;
+        }
+        if (typeof document !== 'undefined' && document.hidden) {
+            return;
+        }
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            return;
+        }
+        if (typeof this.reconnectTimer === 'number') {
+            return;
+        }
+        const attempt = Math.min(this.reconnectAttempt, 6);
+        const delay = 500 * Math.pow(2, attempt);
+        this.reconnectTimer = window.setTimeout(() => {
+            this.reconnectTimer = undefined;
+            this.tryReconnect(false);
+        }, delay);
+    }
+
+    private tryReconnect(resetBackoff: boolean): void {
+        if (!this.enabled) {
+            return;
+        }
+        if (typeof document !== 'undefined' && document.hidden) {
+            return;
+        }
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            this.scheduleReconnect();
+            return;
+        }
+        if (this.ws && this.ws.readyState === this.ws.OPEN) {
+            if (resetBackoff) {
+                this.reconnectAttempt = 0;
+            }
+            return;
+        }
+        if (resetBackoff) {
+            this.reconnectAttempt = 0;
+        } else {
+            this.reconnectAttempt++;
+        }
+        this.start().catch((_e: unknown) => {
+            this.stop();
+            this.scheduleReconnect();
         });
     }
 
@@ -538,25 +646,37 @@ export class ScrcpyAudioController {
                 if (this.sessionId !== sid || this.ws !== ws) {
                     return;
                 }
-                this.stop();
+                this.stopWithReconnect();
             });
+        };
+        ws.onopen = () => {
+            if (this.sessionId !== sid || this.ws !== ws) {
+                return;
+            }
+            this.reconnectAttempt = 0;
         };
         ws.onclose = () => {
             if (this.sessionId !== sid || this.ws !== ws) {
                 return;
             }
             this.stop();
+            this.scheduleReconnect();
         };
         ws.onerror = () => {
             if (this.sessionId !== sid || this.ws !== ws) {
                 return;
             }
             this.stop();
+            this.scheduleReconnect();
         };
     }
 
     private stop(): void {
         this.sessionId++;
+        if (typeof this.reconnectTimer === 'number') {
+            window.clearTimeout(this.reconnectTimer);
+            this.reconnectTimer = undefined;
+        }
         const ws = this.ws;
         this.ws = undefined;
         if (ws) {
@@ -668,7 +788,7 @@ export class ScrcpyAudioController {
 
         if (this.state === 'meta') {
             if (bytes.byteLength < 12) {
-                this.stop();
+                this.stopWithReconnect();
                 return;
             }
             const ptsUs = readI64BE(bytes, 0);
@@ -681,7 +801,7 @@ export class ScrcpyAudioController {
             }
             const payload = bytes.subarray(12);
             if (payload.byteLength !== size) {
-                this.stop();
+                this.stopWithReconnect();
                 return;
             }
             this.onPacket(ptsUs, payload);
@@ -690,7 +810,7 @@ export class ScrcpyAudioController {
         }
 
         if (bytes.byteLength !== this.pendingPacketSize) {
-            this.stop();
+            this.stopWithReconnect();
             return;
         }
         this.onPacket(this.pendingPtsUs, bytes);
@@ -832,7 +952,7 @@ export class ScrcpyAudioController {
                 this.onDecoded(audioData);
             },
             error: (_e: DOMException) => {
-                this.stop();
+                this.stopWithReconnect();
             },
         });
         decoder.configure(config);

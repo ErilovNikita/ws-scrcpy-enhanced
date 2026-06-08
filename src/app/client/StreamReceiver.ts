@@ -44,9 +44,101 @@ export class StreamReceiver<P extends ParamsStream> extends ManagerClient<Params
     private readonly screenInfoMap: Map<number, ScreenInfo> = new Map();
     private readonly videoSettingsMap: Map<number, VideoSettings> = new Map();
     private hasInitialInfo = false;
+    private stopped = false;
+    private reconnectAttempt = 0;
+    private reconnectTimer?: number;
+    private readonly onWindowFocus = (): void => {
+        this.tryReconnect(true);
+    };
+    private readonly onVisibilityChange = (): void => {
+        if (typeof document !== 'undefined' && document.hidden) {
+            return;
+        }
+        this.tryReconnect(true);
+    };
+    private readonly onOnline = (): void => {
+        this.tryReconnect(true);
+    };
 
     constructor(params: P) {
         super(params);
+        this.openNewConnection();
+        if (this.ws) {
+            this.ws.binaryType = 'arraybuffer';
+        }
+        this.bindAutoReconnect();
+    }
+
+    private bindAutoReconnect(): void {
+        if (typeof window !== 'undefined') {
+            window.addEventListener('focus', this.onWindowFocus);
+            window.addEventListener('online', this.onOnline);
+        }
+        if (typeof document !== 'undefined') {
+            document.addEventListener('visibilitychange', this.onVisibilityChange);
+        }
+    }
+
+    private unbindAutoReconnect(): void {
+        if (typeof window !== 'undefined') {
+            window.removeEventListener('focus', this.onWindowFocus);
+            window.removeEventListener('online', this.onOnline);
+        }
+        if (typeof document !== 'undefined') {
+            document.removeEventListener('visibilitychange', this.onVisibilityChange);
+        }
+        if (typeof this.reconnectTimer === 'number') {
+            window.clearTimeout(this.reconnectTimer);
+            this.reconnectTimer = undefined;
+        }
+    }
+
+    private scheduleReconnect(): void {
+        if (this.stopped || this.destroyed) {
+            return;
+        }
+        if (typeof window === 'undefined') {
+            return;
+        }
+        if (typeof document !== 'undefined' && document.hidden) {
+            return;
+        }
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            return;
+        }
+        if (typeof this.reconnectTimer === 'number') {
+            return;
+        }
+        const attempt = Math.min(this.reconnectAttempt, 6);
+        const delay = 500 * Math.pow(2, attempt);
+        this.reconnectTimer = window.setTimeout(() => {
+            this.reconnectTimer = undefined;
+            this.tryReconnect(false);
+        }, delay);
+    }
+
+    private tryReconnect(resetBackoff: boolean): void {
+        if (this.stopped || this.destroyed) {
+            return;
+        }
+        if (typeof document !== 'undefined' && document.hidden) {
+            return;
+        }
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            this.scheduleReconnect();
+            return;
+        }
+        if (this.hasConnection()) {
+            if (resetBackoff) {
+                this.reconnectAttempt = 0;
+            }
+            return;
+        }
+        if (resetBackoff) {
+            this.reconnectAttempt = 0;
+        } else {
+            this.reconnectAttempt++;
+        }
         this.openNewConnection();
         if (this.ws) {
             this.ws.binaryType = 'arraybuffer';
@@ -127,6 +219,7 @@ export class StreamReceiver<P extends ParamsStream> extends ManagerClient<Params
     protected onSocketClose(ev: CloseEvent): void {
         console.log(`${TAG}. WS closed: ${ev.reason}`);
         this.emit('disconnected', ev);
+        this.scheduleReconnect();
     }
 
     protected onSocketMessage(event: MessageEvent): void {
@@ -150,6 +243,7 @@ export class StreamReceiver<P extends ParamsStream> extends ManagerClient<Params
     }
 
     protected onSocketOpen(): void {
+        this.reconnectAttempt = 0;
         this.emit('connected', void 0);
         let e = this.events.shift();
         while (e) {
@@ -174,10 +268,24 @@ export class StreamReceiver<P extends ParamsStream> extends ManagerClient<Params
     }
 
     public stop(): void {
+        this.stopped = true;
         if (this.ws && this.ws.readyState === this.ws.OPEN) {
             this.ws.close();
         }
         this.events.length = 0;
+    }
+
+    public resume(): void {
+        if (this.destroyed) {
+            return;
+        }
+        this.stopped = false;
+        this.tryReconnect(true);
+    }
+
+    public destroy(): void {
+        this.unbindAutoReconnect();
+        super.destroy();
     }
 
     public getEncoders(): string[] {

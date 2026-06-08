@@ -102,6 +102,20 @@ export class StreamClientScrcpy
     private uiStateRestored = false;
     private savedVideoSettings?: SavedVideoSettingsPayload;
     private savedVideoSettingsApplied = false;
+    private stopping = false;
+    private filePickerActive = false;
+    private syncAudioConnection(connected: boolean): void {
+        if (!this.audioEnabled || !ScrcpyAudioController.isSupported() || !this.player) {
+            return;
+        }
+        if (!this.audioController) {
+            this.audioController = new ScrcpyAudioController(this.params);
+        }
+        if (connected) {
+            this.audioController.setOptions(this.audioOptions);
+        }
+        this.audioController.setEnabled(connected);
+    }
 
     public static registerPlayer(playerClass: PlayerClass): void {
         if (playerClass.isSupported()) {
@@ -318,37 +332,47 @@ export class StreamClientScrcpy
         this.restoreUiStateOnce();
     };
 
-    public onDisconnected = (): void => {
-        this.streamReceiver.off('deviceMessage', this.OnDeviceMessage);
-        this.streamReceiver.off('video', this.onVideo);
-        this.streamReceiver.off('clientsStats', this.onClientsStats);
-        this.streamReceiver.off('displayInfo', this.onDisplayInfo);
-        this.streamReceiver.off('disconnected', this.onDisconnected);
-        this.player?.off('video-view-resize', this.onPlayerViewResize);
-        this.player?.off('input-video-resize', this.onInputVideoResize);
-        this.setAudioEnabled(false);
+    public onDisconnected = (_ev: CloseEvent): void => {
+        this.connectedHandled = false;
+        this.syncAudioConnection(false);
         this.pendingVideoPtsUs = 0;
         this.pendingVideoPacketSize = 0;
 
-        window.removeEventListener('resize', this.onWindowResize);
-        if (this.resizeObserver) {
-            this.resizeObserver.disconnect();
-            this.resizeObserver = undefined;
-        }
-        if (typeof this.viewportFitRaf === 'number') {
-            cancelAnimationFrame(this.viewportFitRaf);
-            this.viewportFitRaf = undefined;
+        if (this.stopping) {
+            this.streamReceiver.off('deviceMessage', this.OnDeviceMessage);
+            this.streamReceiver.off('video', this.onVideo);
+            this.streamReceiver.off('clientsStats', this.onClientsStats);
+            this.streamReceiver.off('displayInfo', this.onDisplayInfo);
+            this.streamReceiver.off('disconnected', this.onDisconnected);
+            this.player?.off('video-view-resize', this.onPlayerViewResize);
+            this.player?.off('input-video-resize', this.onInputVideoResize);
+
+            window.removeEventListener('resize', this.onWindowResize);
+            if (this.resizeObserver) {
+                this.resizeObserver.disconnect();
+                this.resizeObserver = undefined;
+            }
+            if (typeof this.viewportFitRaf === 'number') {
+                cancelAnimationFrame(this.viewportFitRaf);
+                this.viewportFitRaf = undefined;
+            }
+
+            this.filePushHandler?.release();
+            this.filePushHandler = undefined;
+            this.uiStateBinding?.dispose();
+            this.uiStateBinding = undefined;
+            this.uiStateRestored = false;
+            this.savedVideoSettings = undefined;
+            this.savedVideoSettingsApplied = false;
+            this.touchHandler?.release();
+            this.touchHandler = undefined;
+            return;
         }
 
-        this.filePushHandler?.release();
-        this.filePushHandler = undefined;
-        this.uiStateBinding?.dispose();
-        this.uiStateBinding = undefined;
-        this.uiStateRestored = false;
-        this.savedVideoSettings = undefined;
-        this.savedVideoSettingsApplied = false;
-        this.touchHandler?.release();
-        this.touchHandler = undefined;
+        if (this.filePickerActive) {
+            return;
+        }
+        this.streamReceiver.resume();
     };
 
     public setAudioEnabled(enabled: boolean): void {
@@ -434,6 +458,7 @@ export class StreamClientScrcpy
             if (parent) {
                 parent.removeChild(moreBox);
             }
+            this.stopping = true;
             this.streamReceiver.stop();
             if (this.player) {
                 this.player.stop();
@@ -539,6 +564,7 @@ export class StreamClientScrcpy
             return;
         }
         this.connectedHandled = true;
+        this.syncAudioConnection(true);
         // Wait for real input stream resolution before running initial auto-fit.
     }
 
@@ -567,6 +593,7 @@ export class StreamClientScrcpy
         if (!this.filePushHandler) {
             return;
         }
+        this.filePickerActive = true;
         const input = document.createElement('input');
         input.type = 'file';
         input.multiple = false;
@@ -574,12 +601,14 @@ export class StreamClientScrcpy
         document.body.appendChild(input);
 
         const cleanup = () => {
+            this.filePickerActive = false;
             input.value = '';
             input.remove();
         };
 
         const onFocus = () => {
             window.removeEventListener('focus', onFocus);
+            this.streamReceiver.resume();
             window.setTimeout(() => {
                 if (!input.files || input.files.length === 0) {
                     cleanup();
@@ -594,7 +623,15 @@ export class StreamClientScrcpy
             if (!file) {
                 return;
             }
-            this.filePushHandler?.pushFiles([file], destinationDir);
+            const push = () => {
+                this.filePushHandler?.pushFiles([file], destinationDir);
+            };
+            if (this.streamReceiver.hasConnection()) {
+                push();
+                return;
+            }
+            this.streamReceiver.once('connected', push);
+            this.streamReceiver.resume();
         });
 
         input.click();
