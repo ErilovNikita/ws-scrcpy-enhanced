@@ -474,10 +474,6 @@ export class ScrcpyAudioController {
     private readonly onOnline = (): void => {
         this.tryReconnect(true);
     };
-    private stopWithReconnect(): void {
-        this.stop();
-        this.scheduleReconnect();
-    }
 
     constructor(private readonly params: ParamsStreamScrcpy) {}
 
@@ -646,7 +642,7 @@ export class ScrcpyAudioController {
                 if (this.sessionId !== sid || this.ws !== ws) {
                     return;
                 }
-                this.stopWithReconnect();
+                this.stop();
             });
         };
         ws.onopen = () => {
@@ -788,7 +784,7 @@ export class ScrcpyAudioController {
 
         if (this.state === 'meta') {
             if (bytes.byteLength < 12) {
-                this.stopWithReconnect();
+                this.stop();
                 return;
             }
             const ptsUs = readI64BE(bytes, 0);
@@ -801,7 +797,7 @@ export class ScrcpyAudioController {
             }
             const payload = bytes.subarray(12);
             if (payload.byteLength !== size) {
-                this.stopWithReconnect();
+                this.stop();
                 return;
             }
             this.onPacket(ptsUs, payload);
@@ -810,7 +806,7 @@ export class ScrcpyAudioController {
         }
 
         if (bytes.byteLength !== this.pendingPacketSize) {
-            this.stopWithReconnect();
+            this.stop();
             return;
         }
         this.onPacket(this.pendingPtsUs, bytes);
@@ -952,7 +948,7 @@ export class ScrcpyAudioController {
                 this.onDecoded(audioData);
             },
             error: (_e: DOMException) => {
-                this.stopWithReconnect();
+                this.stop();
             },
         });
         decoder.configure(config);

@@ -48,16 +48,16 @@ export class StreamReceiver<P extends ParamsStream> extends ManagerClient<Params
     private reconnectAttempt = 0;
     private reconnectTimer?: number;
     private readonly onWindowFocus = (): void => {
-        this.tryReconnect(true);
+        this.tryReconnect(false);
     };
     private readonly onVisibilityChange = (): void => {
         if (typeof document !== 'undefined' && document.hidden) {
             return;
         }
-        this.tryReconnect(true);
+        this.tryReconnect(false);
     };
     private readonly onOnline = (): void => {
-        this.tryReconnect(true);
+        this.tryReconnect(false);
     };
 
     constructor(params: P) {
