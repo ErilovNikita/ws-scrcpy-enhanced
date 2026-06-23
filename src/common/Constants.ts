@@ -22,8 +22,8 @@ const ARGUMENTS = [
     'ws_audio_warmup=true',
     'audio_bit_rate=64000',
     'ws_audio_channels=1',
-    'ws_audio_frame_mode=combined',
-    'ws_reverse=true ws_reverse_url=ws://127.0.0.1:8675/device ws_reverse_token="owhCcTifkZU2kBsUC4TwIYZyaW3iWumYQBc-HccgWH4"'
+    'ws_audio_frame_mode=combined'
+    //'ws_reverse=true ws_reverse_url=ws://127.0.0.1:8675/device ws_reverse_token="VQG46tz8oK10yznpv0IJ2IwqK6ZSzr3LWOnxERtbz3c"'
 ];
 
 export const SERVER_PROCESS_NAME = 'app_process';
