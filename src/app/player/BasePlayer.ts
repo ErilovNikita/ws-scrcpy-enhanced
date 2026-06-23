@@ -511,6 +511,19 @@ export abstract class BasePlayer extends TypedEmitter<PlayerEvents> {
         }
     }
 
+    private getCanvasScale(ctx: CanvasRenderingContext2D): number {
+        const canvas = ctx.canvas;
+        const rect = canvas.getBoundingClientRect();
+        if (rect.width > 0) {
+            const scale = canvas.width / rect.width;
+            if (Number.isFinite(scale) && scale > 0) {
+                return scale;
+            }
+        }
+        const dpr = window.devicePixelRatio || 1;
+        return dpr > 0 ? dpr : 1;
+    }
+
     private updateCanvas(onlyClear: boolean): void {
         const ctx = this.touchableCanvas.getContext('2d');
         if (!ctx) {
@@ -518,7 +531,8 @@ export abstract class BasePlayer extends TypedEmitter<PlayerEvents> {
         }
 
         const y = this.touchableCanvas.height;
-        const height = BasePlayer.STATS_HEIGHT;
+        const scale = this.getCanvasScale(ctx);
+        const height = BasePlayer.STATS_HEIGHT * scale;
         const lines = this.statLines.length;
         const spaces = lines + 1;
         const p = height / 2;

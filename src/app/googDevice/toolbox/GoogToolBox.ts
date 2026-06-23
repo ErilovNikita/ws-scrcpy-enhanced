@@ -84,7 +84,7 @@ export class GoogToolBox extends ToolBox {
             // elements.push(screenshot);
         }
 
-        const uploadFile = new ToolBoxButton('Upload file', SvgImage.Icon.UPLOAD);
+        const uploadFile = new ToolBoxButton('Upload files', SvgImage.Icon.UPLOAD);
         uploadFile.addEventListener('click', () => {
             client.selectAndUploadFile('/sdcard/Download');
         });

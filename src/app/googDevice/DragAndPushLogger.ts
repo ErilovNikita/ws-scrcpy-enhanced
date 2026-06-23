@@ -5,7 +5,7 @@ const TAG = '[DragAndPushLogger]';
 export default class DragAndPushLogger implements DragAndPushListener {
     private static readonly X: number = 20;
     private static readonly Y: number = 40;
-    private static readonly HEIGHT = 12;
+    private static readonly HEIGHT = 14;
     private static readonly LOG_BACKGROUND: string = 'rgba(0,0,0, 0.5)';
     private static readonly DEBUG_COLOR: string = 'hsl(136, 85%,50%)';
     private static readonly ERROR_COLOR: string = 'hsl(336,85%,50%)';
@@ -22,18 +22,37 @@ export default class DragAndPushLogger implements DragAndPushListener {
             this.ctx = canvas.getContext('2d');
         }
     }
+
+    private getCanvasScale(): number {
+        if (!this.ctx) {
+            return 1;
+        }
+        const canvas = this.ctx.canvas;
+        const rect = canvas.getBoundingClientRect();
+        if (rect.width > 0) {
+            const scale = canvas.width / rect.width;
+            if (Number.isFinite(scale) && scale > 0) {
+                return scale;
+            }
+        }
+        const dpr = window.devicePixelRatio || 1;
+        return dpr > 0 ? dpr : 1;
+    }
+
     cleanDirtyLine = (line: number): void => {
         if (!this.ctx) {
             return;
         }
+        const scale = this.getCanvasScale();
         const { X, Y, HEIGHT } = DragAndPushLogger;
-        const x = X;
-        const y = Y + HEIGHT * line * 2;
+        const height = HEIGHT * scale;
+        const x = X * scale;
+        const y = Y * scale + height * line * 2;
         const dirty = this.dirtyMap.get(line);
         if (dirty) {
-            const p = DragAndPushLogger.HEIGHT / 2;
+            const p = height / 2;
             const d = p * 2;
-            this.ctx.clearRect(x - p, y - HEIGHT - p, dirty + d, HEIGHT + d);
+            this.ctx.clearRect(x - p, y - height - p, dirty + d, height + d);
         }
         this.dirtyLines[line] = false;
     };
@@ -47,18 +66,20 @@ export default class DragAndPushLogger implements DragAndPushListener {
         }
         this.cleanDirtyLine(line);
 
+        const scale = this.getCanvasScale();
         const { X, Y, HEIGHT } = DragAndPushLogger;
-        const x = X;
-        const y = Y + HEIGHT * line * 2;
+        const height = HEIGHT * scale;
+        const x = X * scale;
+        const y = Y * scale + height * line * 2;
         this.ctx.save();
-        this.ctx.font = `${HEIGHT}px monospace`;
+        this.ctx.font = `${height}px monospace`;
         const textMetrics = this.ctx.measureText(text);
         const width = Math.abs(textMetrics.actualBoundingBoxLeft) + Math.abs(textMetrics.actualBoundingBoxRight);
         this.dirtyMap.set(line, width);
         this.ctx.fillStyle = DragAndPushLogger.LOG_BACKGROUND;
-        const p = DragAndPushLogger.HEIGHT / 2 - 1;
+        const p = height / 2 - scale;
         const d = p * 2;
-        this.ctx.fillRect(x - p, y - HEIGHT - p, width + d, HEIGHT + d);
+        this.ctx.fillRect(x - p, y - height - p, width + d, height + d);
         this.ctx.fillStyle = error ? DragAndPushLogger.ERROR_COLOR : DragAndPushLogger.DEBUG_COLOR;
         this.ctx.fillText(text, x, y);
         this.ctx.restore();

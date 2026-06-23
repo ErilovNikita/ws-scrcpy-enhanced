@@ -596,7 +596,7 @@ export class StreamClientScrcpy
         this.filePickerActive = true;
         const input = document.createElement('input');
         input.type = 'file';
-        input.multiple = false;
+        input.multiple = true;
         input.style.display = 'none';
         document.body.appendChild(input);
 
@@ -618,13 +618,13 @@ export class StreamClientScrcpy
         window.addEventListener('focus', onFocus);
 
         input.addEventListener('change', () => {
-            const file = input.files && input.files[0];
+            const files = input.files ? Array.from(input.files) : [];
             cleanup();
-            if (!file) {
+            if (!files.length) {
                 return;
             }
             const push = () => {
-                this.filePushHandler?.pushFiles([file], destinationDir);
+                this.filePushHandler?.pushFiles(files, destinationDir);
             };
             if (this.streamReceiver.hasConnection()) {
                 push();
