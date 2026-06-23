@@ -438,6 +438,8 @@ export class ScrcpyAudioController {
 
     private ws?: WebSocket;
     private enabled = false;
+    private reconnectDisabled = false;
+    private lastPromptedFinlinkErrorKey?: string;
     private reconnectAttempt = 0;
     private reconnectTimer?: number;
     private reconnectBound = false;
@@ -485,6 +487,7 @@ export class ScrcpyAudioController {
             this.reconnectAttempt = 0;
             return;
         }
+        this.reconnectDisabled = false;
         if (!ScrcpyAudioController.isSupported()) {
             return;
         }
@@ -545,7 +548,7 @@ export class ScrcpyAudioController {
     }
 
     private scheduleReconnect(): void {
-        if (!this.enabled) {
+        if (!this.enabled || this.reconnectDisabled) {
             return;
         }
         if (typeof window === 'undefined') {
@@ -569,7 +572,7 @@ export class ScrcpyAudioController {
     }
 
     private tryReconnect(resetBackoff: boolean): void {
-        if (!this.enabled) {
+        if (!this.enabled || this.reconnectDisabled) {
             return;
         }
         if (typeof document !== 'undefined' && document.hidden) {
@@ -638,6 +641,10 @@ export class ScrcpyAudioController {
             if (this.sessionId !== sid || this.ws !== ws) {
                 return;
             }
+            if (typeof event.data === 'string') {
+                this.handleFinlinkErrorText(event.data);
+                return;
+            }
             this.onWsMessage(event).catch((_e: unknown) => {
                 if (this.sessionId !== sid || this.ws !== ws) {
                     return;
@@ -665,6 +672,44 @@ export class ScrcpyAudioController {
             this.stop();
             this.scheduleReconnect();
         };
+    }
+
+    private handleFinlinkErrorText(raw: string): void {
+        let parsed: any;
+        try {
+            parsed = JSON.parse(raw);
+        } catch {
+            return;
+        }
+        if (!parsed || parsed.type !== 'finlink_error') {
+            return;
+        }
+        const error = typeof parsed.error === 'string' && parsed.error ? parsed.error : 'unknown_error';
+        const message = typeof parsed.message === 'string' && parsed.message ? parsed.message : error;
+        const retryable = parsed.retryable !== false;
+        console.warn('[ScrcpyAudioController]', 'finlink_error:', error, message);
+        this.showFinlinkErrorPrompt({ error, message, retryable });
+        if (retryable === false) {
+            this.reconnectDisabled = true;
+            this.stop();
+        } else {
+            this.stop();
+            this.scheduleReconnect();
+        }
+    }
+
+    private showFinlinkErrorPrompt(info: { error: string; message: string; retryable: boolean }): void {
+        if (typeof window === 'undefined' || typeof window.alert !== 'function') {
+            return;
+        }
+        const key = `${info.error}::${info.message}::${info.retryable ? 1 : 0}`;
+        if (this.lastPromptedFinlinkErrorKey === key) {
+            return;
+        }
+        this.lastPromptedFinlinkErrorKey = key;
+        try {
+            window.alert(info.message || info.error);
+        } catch {}
     }
 
     private stop(): void {

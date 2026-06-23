@@ -30,6 +30,7 @@ interface StreamReceiverEvents {
     encoders: string[];
     connected: void;
     disconnected: CloseEvent;
+    finlinkError: { error: string; message: string; retryable: boolean };
 }
 
 const TAG = '[StreamReceiver]';
@@ -47,6 +48,9 @@ export class StreamReceiver<P extends ParamsStream> extends ManagerClient<Params
     private stopped = false;
     private reconnectAttempt = 0;
     private reconnectTimer?: number;
+    private reconnectDisabled = false;
+    private lastFinlinkError?: { error: string; message: string; retryable: boolean };
+    private lastPromptedFinlinkErrorKey?: string;
     private readonly onWindowFocus = (): void => {
         this.tryReconnect(false);
     };
@@ -87,14 +91,14 @@ export class StreamReceiver<P extends ParamsStream> extends ManagerClient<Params
         if (typeof document !== 'undefined') {
             document.removeEventListener('visibilitychange', this.onVisibilityChange);
         }
-        if (typeof this.reconnectTimer === 'number') {
+        if (typeof window !== 'undefined' && typeof this.reconnectTimer === 'number') {
             window.clearTimeout(this.reconnectTimer);
             this.reconnectTimer = undefined;
         }
     }
 
     private scheduleReconnect(): void {
-        if (this.stopped || this.destroyed) {
+        if (this.stopped || this.destroyed || this.reconnectDisabled) {
             return;
         }
         if (typeof window === 'undefined') {
@@ -118,7 +122,7 @@ export class StreamReceiver<P extends ParamsStream> extends ManagerClient<Params
     }
 
     private tryReconnect(resetBackoff: boolean): void {
-        if (this.stopped || this.destroyed) {
+        if (this.stopped || this.destroyed || this.reconnectDisabled) {
             return;
         }
         if (typeof document !== 'undefined' && document.hidden) {
@@ -217,12 +221,26 @@ export class StreamReceiver<P extends ParamsStream> extends ManagerClient<Params
     }
 
     protected onSocketClose(ev: CloseEvent): void {
+        if (this.reconnectDisabled) {
+            return;
+        }
+        const closeError = this.getNonRetryableCloseError(ev);
+        if (closeError) {
+            this.disableReconnect(closeError);
+            return;
+        }
         console.log(`${TAG}. WS closed: ${ev.reason}`);
         this.emit('disconnected', ev);
         this.scheduleReconnect();
     }
 
     protected onSocketMessage(event: MessageEvent): void {
+        if (typeof event.data === 'string') {
+            if (this.handleFinlinkErrorText(event.data)) {
+                return;
+            }
+            return;
+        }
         if (event.data instanceof ArrayBuffer) {
             // works only because MAGIC_BYTES_INITIAL and MAGIC_BYTES_MESSAGE have same length
             if (event.data.byteLength > MAGIC_BYTES_INITIAL.length) {
@@ -244,6 +262,7 @@ export class StreamReceiver<P extends ParamsStream> extends ManagerClient<Params
 
     protected onSocketOpen(): void {
         this.reconnectAttempt = 0;
+        this.lastFinlinkError = undefined;
         this.emit('connected', void 0);
         let e = this.events.shift();
         while (e) {
@@ -277,6 +296,9 @@ export class StreamReceiver<P extends ParamsStream> extends ManagerClient<Params
 
     public resume(): void {
         if (this.destroyed) {
+            return;
+        }
+        if (this.reconnectDisabled) {
             return;
         }
         this.stopped = false;
@@ -318,5 +340,79 @@ export class StreamReceiver<P extends ParamsStream> extends ManagerClient<Params
 
     public getDisplayInfo(displayId: number): DisplayInfo | undefined {
         return this.displayInfoMap.get(displayId);
+    }
+
+    protected handleFinlinkErrorText(raw: string): boolean {
+        let parsed: any;
+        try {
+            parsed = JSON.parse(raw);
+        } catch {
+            return false;
+        }
+        if (!parsed || parsed.type !== 'finlink_error') {
+            return false;
+        }
+        const error = typeof parsed.error === 'string' && parsed.error ? parsed.error : 'unknown_error';
+        const message = typeof parsed.message === 'string' && parsed.message ? parsed.message : error;
+        const retryable = parsed.retryable !== false;
+        const info = { error, message, retryable };
+        this.lastFinlinkError = info;
+        console.warn(TAG, 'finlink_error:', info.error, info.message);
+        this.showFinlinkErrorPrompt(info);
+        this.emit('finlinkError', info);
+        if (retryable === false) {
+            this.disableReconnect({ code: undefined, reason: error, message, emit: false });
+            try {
+                this.ws?.close();
+            } catch {}
+        }
+        return true;
+    }
+
+    private getNonRetryableCloseError(ev: CloseEvent): { code?: number; reason?: string; message?: string } | null {
+        if (this.lastFinlinkError && this.lastFinlinkError.retryable === false) {
+            return { code: ev.code, reason: this.lastFinlinkError.error, message: this.lastFinlinkError.message };
+        }
+        const code = ev.code;
+        if (code === 4400 || code === 4404) {
+            const reason = ev.reason || (code === 4400 ? 'missing_device_id' : 'device_not_found');
+            return { code, reason, message: reason };
+        }
+        if (ev.reason === 'missing_device_id' || ev.reason === 'device_not_found') {
+            return { code, reason: ev.reason, message: ev.reason };
+        }
+        return null;
+    }
+
+    private disableReconnect(details: { code?: number; reason?: string; message?: string; emit?: boolean }): void {
+        this.reconnectDisabled = true;
+        this.stopped = true;
+        if (typeof window !== 'undefined' && typeof this.reconnectTimer === 'number') {
+            window.clearTimeout(this.reconnectTimer);
+            this.reconnectTimer = undefined;
+        }
+        const error = details.reason || 'non_retryable_error';
+        const message = details.message || error;
+        const info = { error, message, retryable: false };
+        this.lastFinlinkError = info;
+        console.warn(TAG, 'auto-reconnect disabled:', error, message);
+        this.showFinlinkErrorPrompt(info);
+        if (details.emit !== false) {
+            this.emit('finlinkError', info);
+        }
+    }
+
+    private showFinlinkErrorPrompt(info: { error: string; message: string; retryable: boolean }): void {
+        if (typeof window === 'undefined' || typeof window.alert !== 'function') {
+            return;
+        }
+        const key = `${info.error}::${info.message}::${info.retryable ? 1 : 0}`;
+        if (this.lastPromptedFinlinkErrorKey === key) {
+            return;
+        }
+        this.lastPromptedFinlinkErrorKey = key;
+        try {
+            window.alert(info.message || info.error);
+        } catch {}
     }
 }

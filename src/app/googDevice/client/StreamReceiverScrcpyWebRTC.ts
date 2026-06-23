@@ -91,6 +91,18 @@ export class StreamReceiverScrcpyWebRTC extends StreamReceiverScrcpy {
         const signalSocket = new WebSocket(this.buildDirectWebSocketUrl().toString());
         this.signalSocket = signalSocket;
         signalSocket.onmessage = (event: MessageEvent) => {
+            if (typeof event.data === 'string') {
+                if (this.handleFinlinkErrorText(event.data)) {
+                    try {
+                        signalSocket.close();
+                    } catch {}
+                    return;
+                }
+                this.handleSignal(event.data).catch((error: Error) => {
+                    console.error('[StreamReceiverScrcpyWebRTC]', error.message);
+                });
+                return;
+            }
             this.handleSignal(event.data.toString()).catch((error: Error) => {
                 console.error('[StreamReceiverScrcpyWebRTC]', error.message);
             });
