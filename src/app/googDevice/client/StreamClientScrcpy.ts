@@ -30,7 +30,12 @@ import { ACTION } from '../../../common/Action';
 import { StreamReceiverScrcpy } from './StreamReceiverScrcpy';
 import { ParamsDeviceTracker } from '../../../types/ParamsDeviceTracker';
 import { ScrcpyFilePushStream } from '../filePush/ScrcpyFilePushStream';
-import { ScrcpyAudioController, ScrcpyAudioFrameMode, ScrcpyAudioOptions } from '../../audio/ScrcpyAudioController';
+import {
+    ScrcpyAudioController,
+    ScrcpyAudioFrameMode,
+    ScrcpyAudioOptions,
+    ScrcpyAudioStatus,
+} from '../../audio/ScrcpyAudioController';
 import SvgImage from '../../ui/SvgImage';
 
 type StartParams = {
@@ -99,6 +104,8 @@ export class StreamClientScrcpy
     private initialAutoFitApplied = false;
     private audioController?: ScrcpyAudioController;
     private audioEnabled = false;
+    private audioStatus: ScrcpyAudioStatus = 'Off';
+    private readonly audioStatusListeners = new Set<(status: ScrcpyAudioStatus) => void>();
     private audioOptions: ScrcpyAudioOptions = { frameMode: 'combined', channels: 1, bitrate: 64_000 };
     private pendingVideoPtsUs = 0;
     private pendingVideoPacketSize = 0;
@@ -113,12 +120,19 @@ export class StreamClientScrcpy
             return;
         }
         if (!this.audioController) {
-            this.audioController = new ScrcpyAudioController(this.params);
+            this.audioController = this.createAudioController();
         }
         if (connected) {
             this.audioController.setOptions(this.audioOptions);
         }
         this.audioController.setEnabled(connected);
+    }
+
+    private createAudioController(): ScrcpyAudioController {
+        return new ScrcpyAudioController(this.params, (status) => {
+            this.audioStatus = status;
+            this.audioStatusListeners.forEach((listener) => listener(status));
+        });
     }
 
     public static registerPlayer(playerClass: PlayerClass): void {
@@ -450,12 +464,26 @@ export class StreamClientScrcpy
         this.pendingVideoPtsUs = 0;
         this.pendingVideoPacketSize = 0;
         if (!this.audioController) {
-            this.audioController = new ScrcpyAudioController(this.params);
+            this.audioController = this.createAudioController();
         }
         if (enabled) {
             this.audioController.setOptions(this.audioOptions);
         }
         this.audioController.setEnabled(enabled);
+    }
+
+    public isAudioEnabled(): boolean {
+        return this.audioEnabled;
+    }
+
+    public getAudioStatus(): ScrcpyAudioStatus {
+        return this.audioStatus;
+    }
+
+    public addAudioStatusListener(listener: (status: ScrcpyAudioStatus) => void): () => void {
+        this.audioStatusListeners.add(listener);
+        listener(this.audioStatus);
+        return () => this.audioStatusListeners.delete(listener);
     }
 
     public getAudioOptions(): ScrcpyAudioOptions {
@@ -465,7 +493,7 @@ export class StreamClientScrcpy
     public setAudioOptions(options: { frameMode?: ScrcpyAudioFrameMode; channels?: 1 | 2; bitrate?: number }): void {
         this.audioOptions = { ...this.audioOptions, ...options };
         if (!this.audioController) {
-            this.audioController = new ScrcpyAudioController(this.params);
+            this.audioController = this.createAudioController();
         }
         this.audioController.setOptions(this.audioOptions);
     }
@@ -475,6 +503,7 @@ export class StreamClientScrcpy
             throw Error(`Invalid udid value: "${udid}"`);
         }
 
+        this.audioEnabled = ScrcpyAudioController.isSupported();
         this.fitToScreen = fitToScreen;
         this.screenOffCommandSent = false;
         this.hasExplicitFitToScreen = typeof fitToScreen === 'boolean';

@@ -13,7 +13,7 @@ SCRCPY_LISTENS_ON_ALL_INTERFACES = true;
 SCRCPY_LISTENS_ON_ALL_INTERFACES = false;
 /// #endif
 
-export const SERVER_OPTIONS = ['stay_awake=true'];
+export const SERVER_OPTIONS = ['stay_awake=true', 'audio_codec=aac', 'audio_source=output'];
 
 const ARGUMENTS = [
     SERVER_VERSION,

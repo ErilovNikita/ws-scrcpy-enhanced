@@ -22,6 +22,15 @@ export type ScrcpyAudioOptions = {
     channels?: 1 | 2;
 };
 
+export type ScrcpyAudioStatus =
+    | 'Off'
+    | 'Connecting'
+    | 'Connected'
+    | 'Receiving'
+    | 'Waiting for browser tap'
+    | 'Playing'
+    | 'Error';
+
 function normalizeAudioOptions(options?: Partial<ScrcpyAudioOptions>): ScrcpyAudioOptions {
     const frameMode: ScrcpyAudioFrameMode = options?.frameMode === 'split' ? 'split' : 'combined';
     const channelsRaw = options?.channels;
@@ -438,6 +447,7 @@ export class ScrcpyAudioController {
 
     private ws?: WebSocket;
     private enabled = false;
+    private audioUnlocked = false;
     private reconnectDisabled = false;
     private lastPromptedFinlinkErrorKey?: string;
     private reconnectAttempt = 0;
@@ -464,6 +474,7 @@ export class ScrcpyAudioController {
     private nextStartTime = 0;
     private workletNode?: AudioWorkletNode;
     private workletModuleUrl?: string;
+    private status: ScrcpyAudioStatus = 'Off';
     private readonly onWindowFocus = (): void => {
         this.tryReconnect(true);
     };
@@ -476,8 +487,36 @@ export class ScrcpyAudioController {
     private readonly onOnline = (): void => {
         this.tryReconnect(true);
     };
+    private readonly onUserInteraction = (): void => {
+        if (!this.enabled) {
+            return;
+        }
+        this.audioUnlocked = true;
+        if (this.ctx && this.ctx.state !== 'running') {
+            this.ctx.resume().catch((error: unknown) => {
+                console.error('[ScrcpyAudioController] Failed to resume browser audio', error);
+            });
+        }
+        this.start().catch((error: unknown) => {
+            console.error('[ScrcpyAudioController] Failed to start browser audio', error);
+            this.setStatus('Error');
+            this.stop();
+            this.scheduleReconnect();
+        });
+    };
 
-    constructor(private readonly params: ParamsStreamScrcpy) {}
+    constructor(
+        private readonly params: ParamsStreamScrcpy,
+        private readonly onStatusChange?: (status: ScrcpyAudioStatus) => void,
+    ) {}
+
+    private setStatus(status: ScrcpyAudioStatus): void {
+        if (this.status === status) {
+            return;
+        }
+        this.status = status;
+        this.onStatusChange?.(status);
+    }
 
     public setEnabled(enabled: boolean): void {
         this.enabled = enabled;
@@ -485,14 +524,18 @@ export class ScrcpyAudioController {
             this.unbindReconnectEvents();
             this.stop();
             this.reconnectAttempt = 0;
+            this.setStatus('Off');
             return;
         }
+        this.setStatus('Connecting');
         this.reconnectDisabled = false;
         if (!ScrcpyAudioController.isSupported()) {
             return;
         }
         this.bindReconnectEvents();
         this.start().catch((_e: unknown) => {
+            console.error('[ScrcpyAudioController] Failed to start audio stream', _e);
+            this.setStatus('Error');
             this.stop();
             this.scheduleReconnect();
         });
@@ -510,6 +553,8 @@ export class ScrcpyAudioController {
         }
         this.stop();
         this.start().catch((_e: unknown) => {
+            console.error('[ScrcpyAudioController] Failed to restart audio stream', _e);
+            this.setStatus('Error');
             this.stop();
             this.scheduleReconnect();
         });
@@ -523,6 +568,10 @@ export class ScrcpyAudioController {
         if (typeof window !== 'undefined') {
             window.addEventListener('focus', this.onWindowFocus);
             window.addEventListener('online', this.onOnline);
+        }
+        if (typeof document !== 'undefined') {
+            document.addEventListener('pointerdown', this.onUserInteraction, { passive: true });
+            document.addEventListener('keydown', this.onUserInteraction);
         }
         if (typeof document !== 'undefined') {
             document.addEventListener('visibilitychange', this.onVisibilityChange);
@@ -539,6 +588,8 @@ export class ScrcpyAudioController {
             window.removeEventListener('online', this.onOnline);
         }
         if (typeof document !== 'undefined') {
+            document.removeEventListener('pointerdown', this.onUserInteraction);
+            document.removeEventListener('keydown', this.onUserInteraction);
             document.removeEventListener('visibilitychange', this.onVisibilityChange);
         }
         if (typeof this.reconnectTimer === 'number') {
@@ -593,23 +644,22 @@ export class ScrcpyAudioController {
         } else {
             this.reconnectAttempt++;
         }
+        this.setStatus('Connecting');
         this.start().catch((_e: unknown) => {
+            console.error('[ScrcpyAudioController] Failed to reconnect audio stream', _e);
+            this.setStatus('Error');
             this.stop();
             this.scheduleReconnect();
         });
     }
 
     private async start(): Promise<void> {
-        if (this.ws && this.ws.readyState === this.ws.OPEN) {
-            return;
-        }
-        this.sessionId++;
-        const sid = this.sessionId;
-
-        if (!this.pcmPlayer) {
+        if (!this.pcmPlayer && this.audioUnlocked) {
             try {
                 await this.ensurePcmPlayer();
-            } catch (_e: unknown) {}
+            } catch (error: unknown) {
+                console.warn('[ScrcpyAudioController] PCM player unavailable; using AudioContext playback', error);
+            }
         }
         if (!this.pcmPlayer) {
             if (!this.ctx) {
@@ -618,11 +668,18 @@ export class ScrcpyAudioController {
                 this.gain.gain.value = 1;
                 this.gain.connect(this.ctx.destination);
             }
-            if (this.ctx.state !== 'running') {
+            if (this.audioUnlocked && this.ctx.state !== 'running') {
                 await this.ctx.resume();
             }
-            await this.ensureWorklet();
+            if (this.audioUnlocked) {
+                await this.ensureWorklet();
+            }
         }
+        if (this.ws && this.ws.readyState === this.ws.OPEN) {
+            return;
+        }
+        this.sessionId++;
+        const sid = this.sessionId;
 
         const direct = buildAudioDirectUrl(this.params.ws, this.options);
         const url = this.params.useProxy ? wrapInProxy(direct) : direct;
@@ -649,6 +706,8 @@ export class ScrcpyAudioController {
                 if (this.sessionId !== sid || this.ws !== ws) {
                     return;
                 }
+                console.error('[ScrcpyAudioController] Failed to process audio packet', _e);
+                this.setStatus('Error');
                 this.stop();
             });
         };
@@ -657,19 +716,26 @@ export class ScrcpyAudioController {
                 return;
             }
             this.reconnectAttempt = 0;
+            this.setStatus('Connected');
         };
-        ws.onclose = () => {
+        ws.onclose = (event: CloseEvent) => {
             if (this.sessionId !== sid || this.ws !== ws) {
                 return;
             }
+            if (event.code !== 1000) {
+                console.error('[ScrcpyAudioController] Audio WebSocket closed', event.code, event.reason);
+            }
             this.stop();
+            this.setStatus(this.enabled ? 'Error' : 'Off');
             this.scheduleReconnect();
         };
         ws.onerror = () => {
             if (this.sessionId !== sid || this.ws !== ws) {
                 return;
             }
+            console.error('[ScrcpyAudioController] Audio WebSocket error');
             this.stop();
+            this.setStatus('Error');
             this.scheduleReconnect();
         };
     }
@@ -691,8 +757,10 @@ export class ScrcpyAudioController {
         this.showFinlinkErrorPrompt({ error, message, retryable });
         if (retryable === false) {
             this.reconnectDisabled = true;
+            this.setStatus('Error');
             this.stop();
         } else {
+            this.setStatus('Error');
             this.stop();
             this.scheduleReconnect();
         }
@@ -888,6 +956,7 @@ export class ScrcpyAudioController {
             throw new Error('Bad audio initial config');
         }
         this.initial = { version, codec, sampleRate, channels, flags, bitRate };
+        this.setStatus(this.audioUnlocked ? 'Connected' : 'Waiting for browser tap');
         if (configLen > 0) {
             this.audioConfig = bytes.subarray(offset, offset + configLen).slice();
             this.cachedAudioConfig = this.audioConfig.slice();
@@ -912,6 +981,7 @@ export class ScrcpyAudioController {
             return;
         }
 
+        this.setStatus(this.audioUnlocked ? 'Receiving' : 'Waiting for browser tap');
         let payload = packet;
         if (!this.isAdts && isAdtsFrame(packet)) {
             const header = parseAdtsHeader(packet);
@@ -964,6 +1034,11 @@ export class ScrcpyAudioController {
                     return;
                 }
                 if (!result.supported) {
+                    console.error(
+                        '[ScrcpyAudioController] Browser does not support the received AAC audio configuration',
+                        config,
+                    );
+                    this.setStatus('Error');
                     this.stop();
                     return;
                 }
@@ -972,6 +1047,8 @@ export class ScrcpyAudioController {
                 if (sid !== this.sessionId) {
                     return;
                 }
+                console.error('[ScrcpyAudioController] Failed to validate audio decoder configuration', _e);
+                this.setStatus('Error');
                 this.stop();
             });
             return;
@@ -993,6 +1070,8 @@ export class ScrcpyAudioController {
                 this.onDecoded(audioData);
             },
             error: (_e: DOMException) => {
+                console.error('[ScrcpyAudioController] Audio decoder failed', _e);
+                this.setStatus('Error');
                 this.stop();
             },
         });
@@ -1003,6 +1082,11 @@ export class ScrcpyAudioController {
 
     private onDecoded(audioData: AudioData): void {
         if (!this.ctx && !this.pcmPlayer) {
+            audioData.close();
+            return;
+        }
+        if (!this.pcmPlayer && this.ctx?.state !== 'running') {
+            this.setStatus('Waiting for browser tap');
             audioData.close();
             return;
         }
@@ -1021,6 +1105,7 @@ export class ScrcpyAudioController {
                 converted[i] = (converted[i] || 0) * 0.9;
             }
             this.pcmPlayer.feed(converted);
+            this.setStatus('Playing');
             return;
         }
 
@@ -1054,6 +1139,7 @@ export class ScrcpyAudioController {
         };
         this.scheduled.push(source);
         source.start(startAt);
+        this.setStatus('Playing');
     }
 
     private async toBytes(data: unknown): Promise<Uint8Array | null> {

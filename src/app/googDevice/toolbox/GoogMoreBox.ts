@@ -272,15 +272,26 @@ export class GoogMoreBox {
         const audioLabel = document.createElement('label');
         const audioCheck = document.createElement('input');
         audioCheck.type = 'checkbox';
-        audioCheck.checked = false;
+        audioCheck.checked = client.isAudioEnabled();
         audioCheck.id = audioId;
         audioLabel.htmlFor = audioId;
         audioCheck.dataset.persistSkipRestore = 'true';
 
         GoogMoreBox.wrap('p', [audioCheck, audioLabel], moreBox, ['flex-center']);
+        let removeAudioStatusListener: (() => void) | undefined;
 
         if (ScrcpyAudioController.isSupported()) {
             audioLabel.innerText = 'Audio';
+            const audioHelp = document.createElement('small');
+            audioHelp.innerText =
+                'If you do not hear audio in the browser, tap or click the page once to allow playback.';
+            GoogMoreBox.wrap('p', [audioHelp], moreBox);
+            const audioStatus = document.createElement('small');
+            audioStatus.innerText = `Audio: ${client.getAudioStatus()}`;
+            GoogMoreBox.wrap('p', [audioStatus], moreBox);
+            removeAudioStatusListener = client.addAudioStatusListener((status) => {
+                audioStatus.innerText = `Audio: ${status}`;
+            });
             audioCheck.onchange = () => {
                 applyAudioOptions();
                 client.setAudioEnabled(audioCheck.checked);
@@ -358,6 +369,7 @@ export class GoogMoreBox {
                 console.error(TAG, ev);
             }
             stopScreenPowerModeInterval();
+            removeAudioStatusListener?.();
             client.setAudioEnabled(false);
             const parent = overlay.parentElement;
             if (parent) {
