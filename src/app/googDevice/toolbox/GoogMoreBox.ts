@@ -29,12 +29,27 @@ export class GoogMoreBox {
         const videoSettings = player.getVideoSettings();
         const { displayId } = videoSettings;
         const preferredSettings = player.getPreferredVideoSetting();
+        const overlay = document.createElement('div');
+        overlay.className = 'more-box-overlay';
+        overlay.hidden = true;
         const moreBox = document.createElement('div');
-        moreBox.className = 'more-box';
+        moreBox.className = 'more-box scrcpy-settings-dialog';
+        moreBox.setAttribute('role', 'dialog');
+        moreBox.setAttribute('aria-modal', 'true');
+        const header = document.createElement('div');
+        header.className = 'more-box-header';
         const nameBox = document.createElement('p');
         nameBox.innerText = `${udid} (${playerName})`;
         nameBox.className = 'text-with-shadow';
-        moreBox.appendChild(nameBox);
+        nameBox.id = `stream_settings_title_${udid}_${playerName}_${displayId}`;
+        moreBox.setAttribute('aria-labelledby', nameBox.id);
+        const closeButton = document.createElement('button');
+        closeButton.className = 'more-box-close';
+        closeButton.type = 'button';
+        closeButton.innerText = '×';
+        closeButton.setAttribute('aria-label', 'Close stream settings');
+        header.append(nameBox, closeButton);
+        moreBox.appendChild(header);
         const input = (this.input = document.createElement('textarea'));
         input.classList.add('text-area');
         input.id = `text_input_${udid}_${playerName}_${displayId}`;
@@ -259,7 +274,7 @@ export class GoogMoreBox {
         audioCheck.id = audioId;
         audioLabel.htmlFor = audioId;
         audioCheck.dataset.persistSkipRestore = 'true';
-        
+
         GoogMoreBox.wrap('p', [audioCheck, audioLabel], moreBox, ['flex-center']);
 
         if (ScrcpyAudioController.isSupported()) {
@@ -342,11 +357,10 @@ export class GoogMoreBox {
             }
             stopScreenPowerModeInterval();
             client.setAudioEnabled(false);
-            const parent = moreBox.parentElement;
+            const parent = overlay.parentElement;
             if (parent) {
-                parent.removeChild(moreBox);
+                parent.removeChild(overlay);
             }
-            player.off('video-view-resize', this.onViewVideoResize);
             if (this.onStop) {
                 this.onStop();
                 delete this.onStop;
@@ -357,17 +371,35 @@ export class GoogMoreBox {
         stopBtn.innerText = `Disconnect`;
         stopBtn.onclick = stop;
 
-        GoogMoreBox.wrap('p', [stopBtn], moreBox);
-        player.on('video-view-resize', this.onViewVideoResize);
-        player.on('video-settings', this.onVideoSettings);
-        this.holder = moreBox;
-    }
+        const footer = document.createElement('div');
+        footer.className = 'more-box-footer';
+        footer.appendChild(stopBtn);
+        moreBox.appendChild(footer);
+        overlay.appendChild(moreBox);
 
-    private onViewVideoResize = (size: Size): void => {
-        // padding: 10px
-        const dpr = window.devicePixelRatio || 1;
-        this.holder.style.width = `${size.width / dpr - 2 * 10}px`;
-    };
+        const close = (): void => {
+            const toggle = document.getElementById(`input_show_more_${udid}_${playerName}_${displayId}`);
+            if (toggle instanceof HTMLInputElement && toggle.checked) {
+                toggle.click();
+            } else {
+                overlay.hidden = true;
+            }
+        };
+        closeButton.addEventListener('click', close);
+        overlay.addEventListener('click', (event: MouseEvent) => {
+            if (event.target === overlay) {
+                close();
+            }
+        });
+        overlay.addEventListener('keydown', (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                close();
+            }
+        });
+
+        player.on('video-settings', this.onVideoSettings);
+        this.holder = overlay;
+    }
 
     private onVideoSettings = (videoSettings: VideoSettings): void => {
         if (this.bitrateInput) {

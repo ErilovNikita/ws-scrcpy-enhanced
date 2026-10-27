@@ -48,3 +48,160 @@ input:not([type="checkbox"]) {
 .spoiler > input {
     display: none;
 }
+
+body.stream .more-box-overlay {
+    box-sizing: border-box;
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: hsla(215, 28%, 18%, .38);
+    backdrop-filter: blur(3px);
+}
+
+body.stream .more-box-overlay:not([hidden]) {
+    display: flex;
+}
+
+body.stream .scrcpy-settings-dialog {
+    box-sizing: border-box;
+    display: flex;
+    position: relative;
+    flex-direction: column;
+    width: min(680px, 100%);
+    max-height: min(820px, 100%);
+    padding: 0;
+    overflow: auto;
+    border: 1px solid hsl(216, 20%, 88%);
+    border-radius: 14px;
+    background: hsl(0, 0%, 100%);
+    box-shadow: 0 20px 60px hsla(215, 28%, 18%, .24);
+    color: hsl(215, 28%, 18%);
+    font-family: "Segoe UI", "Segoe UI Variable", system-ui, sans-serif;
+    font-size: 14px;
+}
+
+body.stream .scrcpy-settings-dialog .more-box-header {
+    box-sizing: border-box;
+    display: flex;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 56px;
+    padding: 10px 18px;
+    border-bottom: 1px solid hsl(216, 20%, 88%);
+    background: hsl(0, 0%, 100%);
+}
+
+body.stream .scrcpy-settings-dialog .more-box-header p {
+    margin: 0;
+    overflow: hidden;
+    color: hsl(215, 28%, 18%);
+    font-size: 15px;
+    font-weight: 650;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+body.stream .scrcpy-settings-dialog .more-box-close {
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid hsl(216, 20%, 88%);
+    border-radius: 7px;
+    background: hsl(0, 0%, 100%);
+    color: hsl(215, 14%, 48%);
+    font: inherit;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+body.stream .scrcpy-settings-dialog .more-box-close:hover {
+    background: hsl(210, 60%, 97%);
+    color: hsl(215, 28%, 18%);
+}
+
+body.stream .scrcpy-settings-dialog > p,
+body.stream .scrcpy-settings-dialog > div {
+    margin: 0;
+    padding: 10px 18px;
+}
+
+body.stream .scrcpy-settings-dialog label,
+body.stream .scrcpy-settings-dialog .text-with-shadow {
+    color: hsl(215, 28%, 18%);
+    text-shadow: none;
+}
+
+body.stream .scrcpy-settings-dialog input:not([type="checkbox"]),
+body.stream .scrcpy-settings-dialog select,
+body.stream .scrcpy-settings-dialog textarea {
+    box-sizing: border-box;
+    max-width: 100%;
+    padding: 8px 10px;
+    border: 1px solid hsl(216, 20%, 82%);
+    border-radius: 7px;
+    background: hsl(0, 0%, 100%);
+    color: hsl(215, 28%, 18%);
+    font-family: inherit;
+    font-size: inherit;
+}
+
+body.stream .scrcpy-settings-dialog button:not(.more-box-close) {
+    padding: 8px 12px;
+    border: 1px solid hsl(216, 20%, 82%);
+    border-radius: 7px;
+    background: hsl(0, 0%, 100%);
+    color: hsl(207, 87%, 40%);
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+body.stream .scrcpy-settings-dialog button:not(.more-box-close):hover {
+    border-color: hsl(207, 87%, 48%);
+    background: hsl(210, 60%, 97%);
+}
+
+body.stream .scrcpy-settings-dialog .spoiler > label {
+    font-weight: 600;
+}
+
+body.stream .scrcpy-settings-dialog .spoiler > input:checked ~ div {
+    padding: 10px;
+    border-radius: 8px;
+    background: hsl(216, 33%, 97%);
+}
+
+body.stream .scrcpy-settings-dialog .more-box-footer {
+    display: flex;
+    position: sticky;
+    bottom: 0;
+    justify-content: flex-end;
+    margin-top: auto;
+    border-top: 1px solid hsl(216, 20%, 88%);
+    background: hsl(0, 0%, 100%);
+}
+
+body.stream .scrcpy-settings-dialog .more-box-footer button {
+    color: hsl(342, 75%, 42%) !important;
+}
+
+@media (max-width: 600px) {
+    body.stream .more-box-overlay {
+        padding: 12px;
+    }
+
+    body.stream .scrcpy-settings-dialog {
+        max-height: 100%;
+        border-radius: 12px;
+    }
+}

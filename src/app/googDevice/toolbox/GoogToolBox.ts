@@ -118,10 +118,13 @@ export class GoogToolBox extends ToolBox {
         if (moreBox) {
             const displayId = player.getVideoSettings().displayId;
             const id = `show_more_${udid}_${playerName}_${displayId}`;
-            const more = new ToolBoxCheckbox('More', SvgImage.Icon.SETTINGS, id);
+            const more = new ToolBoxCheckbox('Settings', SvgImage.Icon.SETTINGS, id);
             more.addEventListener('change', (_, el) => {
                 const element = el.getElement();
-                moreBox.style.display = element.checked ? 'block' : 'none';
+                moreBox.hidden = !element.checked;
+                if (element.checked) {
+                    moreBox.querySelector<HTMLButtonElement>('.more-box-close')?.focus();
+                }
             });
             elements.unshift(more);
         }
