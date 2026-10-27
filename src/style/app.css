@@ -79,6 +79,15 @@ body.shell {
 }
 
 body.stream {
+    color-scheme: light;
+    --stream-bg-color: hsl(0, 0%, 20%);
+    --controls-bg-color: hsl(0, 0%, 100%);
+    --control-buttons-bg-color: hsl(0, 0%, 100%);
+    --text-color: hsl(215, 28%, 18%);
+    --text-color-light: hsl(215, 14%, 48%);
+    --svg-button-fill: hsl(215, 18%, 42%);
+    --button-text-color: hsl(207, 87%, 40%);
+    --button-border-color: hsl(216, 20%, 82%);
     background-color: var(--stream-bg-color);
 }
 
@@ -102,9 +111,13 @@ body.stream {
 }
 
 .device-view {
+    box-sizing: border-box;
+    position: relative;
     z-index: 1;
-    float: right;
-    display: inline-block;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
 }
 
 .video-layer {
@@ -118,16 +131,28 @@ body.stream {
 }
 
 .video {
-    float: right;
-    max-height: 100%;
+    position: relative;
+    flex: 0 1 auto;
+    align-self: center;
     max-width: 100%;
+    max-height: 100%;
     background-color: #000000;
 }
 
 
 .control-buttons-list {
-    float: right;
-    width: 3.715rem;
+    box-sizing: border-box;
+    position: relative;
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: .25rem;
+    width: 100%;
+    min-height: 3.5rem;
+    padding: .5rem;
+    border-bottom: 1px solid var(--button-border-color);
     background-color: var(--control-buttons-bg-color);
 }
 
@@ -158,7 +183,7 @@ body.stream {
 }
 
 .control-wrapper > input[type=checkbox].two-images:checked + label > svg.image-on {
-    display: block;
+    display: none;
 }
 
 .control-wrapper > input[type=checkbox].two-images:not(:checked) + label > svg.image-on {
@@ -170,7 +195,7 @@ body.stream {
 }
 
 .control-wrapper > input[type=checkbox].two-images:not(:checked) + label > svg.image-off {
-    display: block;
+    display: none;
 }
 
 .control-wrapper > input[type=checkbox]:checked + label > svg {

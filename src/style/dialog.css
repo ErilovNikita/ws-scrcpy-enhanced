@@ -138,3 +138,370 @@
     grid-gap: 0.2rem;
     align-items: center;
 }
+
+body.list .dialog-background.configureDialog {
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    padding: 24px;
+    background: hsla(215, 28%, 18%, .38);
+    backdrop-filter: blur(3px);
+}
+
+body.list .dialog-container.configureDialog {
+    display: flex;
+    flex-direction: column;
+    width: min(760px, 100%);
+    max-width: 760px;
+    min-width: 0;
+    max-height: min(820px, 100%);
+    border: 1px solid var(--device-border-color);
+    border-radius: 14px;
+    background: var(--device-surface-color);
+    box-shadow: 0 20px 60px hsla(215, 28%, 18%, .24);
+    font-family: "Segoe UI", "Segoe UI Variable", system-ui, sans-serif;
+}
+
+body.list .dialog-container.configureDialog.ready {
+    height: auto;
+    min-height: 0;
+}
+
+body.list .dialog-header.configureDialog {
+    flex: 0 0 auto;
+    height: auto;
+    min-height: 60px;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--device-border-color);
+    background: var(--device-surface-color);
+}
+
+body.list .dialog-header.configureDialog .control-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    margin: 0 12px 0 0;
+    border: 1px solid var(--device-border-color);
+    border-radius: 8px;
+    background: var(--device-surface-color);
+    opacity: 1;
+}
+
+body.list .dialog-header.configureDialog .control-button > svg {
+    width: 18px;
+    height: 18px;
+    fill: var(--text-color);
+}
+
+body.list .dialog-header.configureDialog span.dialog-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    padding: 0;
+    color: var(--text-color);
+    font-family: inherit;
+    font-size: 18px;
+    font-weight: 650;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+body.list .dialog-header.configureDialog .configure-status {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0 14px;
+    color: var(--device-muted-color);
+    font-family: inherit;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+body.list .dialog-header.configureDialog .configure-status::before {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--device-muted-color);
+    content: "";
+}
+
+body.list .dialog-header.configureDialog .configure-status.ready {
+    color: var(--device-status-color);
+}
+
+body.list .dialog-header.configureDialog .configure-status.ready::before {
+    background: var(--device-status-color);
+}
+
+body.list .dialog-header.configureDialog .settings-action-button.configure-open-button {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 36px;
+    margin: 0;
+    padding: 7px 14px;
+    border: 1px solid var(--device-border-color);
+    border-radius: 8px;
+    background: var(--device-surface-color);
+    color: var(--device-accent-color);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 550;
+    cursor: pointer;
+}
+
+body.list .dialog-header.configureDialog .settings-action-button.configure-open-button > svg {
+    width: 16px;
+    height: 16px;
+    fill: var(--device-accent-color);
+}
+
+body.list .dialog-header.configureDialog .settings-action-button.configure-open-button:disabled {
+    background: var(--device-border-color);
+    color: var(--device-muted-color);
+    cursor: not-allowed;
+}
+
+body.list .dialog-header.configureDialog .settings-action-button.configure-open-button:hover:not(:disabled) {
+    border-color: var(--device-accent-color);
+    background: var(--device-list-hover-color);
+}
+
+body.list .dialog-body.configureDialog {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 20px 24px;
+    background: var(--device-surface-color);
+}
+
+body.list .dialog-body.configureDialog.hidden {
+    display: none;
+    height: auto;
+}
+
+body.list .dialog-body.configureDialog.visible {
+    height: auto;
+    overflow: auto;
+}
+
+body.list .dialog-body.configureDialog .controls {
+    gap: 12px 16px;
+    padding: 0;
+    align-items: center;
+}
+
+body.list .dialog-body.configureDialog > .controls + .controls {
+    margin-top: 20px;
+}
+
+body.list .dialog-body.configureDialog .label {
+    color: var(--text-color);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 550;
+}
+
+body.list .dialog-body.configureDialog .input {
+    width: 100%;
+    min-width: 0;
+    min-height: 38px;
+    padding: 7px 10px;
+    border: 1px solid var(--device-border-color);
+    border-radius: 8px;
+    background: var(--device-surface-color);
+    color: var(--text-color);
+    font-family: inherit;
+    font-size: 13px;
+}
+
+body.list .dialog-body.configureDialog input[type="range"].input {
+    min-height: 24px;
+    padding: 0;
+    accent-color: var(--device-accent-color);
+}
+
+body.list .dialog-body.configureDialog .fit-to-screen-row {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: [labels] 35% [controls] 65%;;
+    gap: 12px 16px;
+    align-items: center;
+}
+
+body.list .dialog-body.configureDialog .fit-to-screen-row > .label {
+    grid-column: 1;
+    margin: 0;
+}
+
+body.list .dialog-body.configureDialog .fit-to-screen-row > .fit-to-screen-toggle {
+    grid-column: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    position: relative;
+    box-sizing: border-box;
+    width: 42px;
+    height: 24px;
+    min-height: 24px;
+    margin: 0;
+    padding: 2px;
+    border: 1px solid var(--device-border-color);
+    border-radius: 999px;
+    background: var(--device-border-color);
+    opacity: 1;
+    cursor: pointer;
+    transition: background-color .15s ease, border-color .15s ease;
+}
+
+body.list .dialog-body.configureDialog .fit-to-screen-toggle > svg {
+    display: none;
+}
+
+body.list .dialog-body.configureDialog .fit-to-screen-toggle::after {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 1px 2px hsla(215, 28%, 18%, .24);
+    content: "";
+    transition: transform .15s ease;
+}
+
+body.list .dialog-body.configureDialog input[type="checkbox"]:checked + .fit-to-screen-toggle {
+    border-color: var(--device-accent-color);
+    background: var(--device-accent-color);
+}
+
+body.list .dialog-body.configureDialog input[type="checkbox"]:checked + .fit-to-screen-toggle::after {
+    transform: translateX(18px);
+}
+
+body.list .dialog-body.configureDialog input[type="checkbox"]:focus-visible + .fit-to-screen-toggle {
+    outline: 2px solid var(--device-accent-color);
+    outline-offset: 3px;
+}
+
+body.list .dialog-footer.configureDialog {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 16px;
+    box-sizing: border-box;
+    height: auto;
+    min-height: 66px;
+    padding: 12px 20px;
+    border-top: 1px solid var(--device-border-color);
+    background: var(--device-page-color);
+}
+
+body.list .dialog-footer.configureDialog .subtitle {
+    float: none;
+    color: var(--device-muted-color);
+    font-family: inherit;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+body.list .dialog-footer.configureDialog .settings-footer-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+}
+
+body.list .dialog-footer.configureDialog .settings-action-button {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: auto;
+    min-height: 36px;
+    margin: 0;
+    padding: 7px 12px;
+    border: 1px solid var(--device-border-color);
+    border-radius: 8px;
+    background: var(--device-surface-color);
+    color: var(--device-accent-color);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 550;
+    cursor: pointer;
+}
+
+body.list .dialog-footer.configureDialog .settings-action-button > svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+}
+
+body.list .dialog-footer.configureDialog .settings-action-button:hover {
+    border-color: var(--device-accent-color);
+    background: var(--device-list-hover-color);
+}
+
+body.list .dialog-footer.configureDialog .settings-action-button.configure-open-button:hover:not(:disabled) {
+    border-color: transparent;
+    background: var(--device-accent-color);
+}
+
+body.list .dialog-body.configureDialog [hidden] {
+    display: none !important;
+}
+
+@media (max-width: 600px) {
+    body.list .dialog-background.configureDialog {
+        padding: 12px;
+    }
+
+    body.list .dialog-header.configureDialog {
+        padding: 10px 14px;
+    }
+
+    body.list .dialog-body.configureDialog {
+        padding: 16px;
+    }
+
+    body.list .dialog-body.configureDialog .controls {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 6px;
+    }
+
+    body.list .dialog-body.configureDialog .fit-to-screen-row {
+        grid-template-columns: minmax(0, 1fr) 42px;
+        gap: 8px;
+    }
+
+    body.list .dialog-header.configureDialog .configure-status {
+        margin: 0 8px;
+        font-size: 0;
+    }
+
+    body.list .dialog-header.configureDialog .configure-status::before {
+        width: 8px;
+        height: 8px;
+    }
+
+    body.list .dialog-footer.configureDialog {
+        padding: 10px 14px;
+    }
+
+    body.list .dialog-footer.configureDialog .settings-footer-actions {
+        justify-content: center;
+    }
+
+    body.list .dialog-footer.configureDialog .settings-action-button {
+        flex: 1 1 auto;
+        padding: 7px 8px;
+    }
+}

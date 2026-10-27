@@ -99,6 +99,7 @@ export class ConfigureScrcpy extends BaseClient<ParamsStreamScrcpy, ConfigureScr
             text = `${text}. Other clients: ${this.connectionCount}.`;
         }
         this.connectionStatusElement.innerText = text;
+        this.connectionStatusElement.classList.toggle('ready', this.statusText === 'Ready');
     }
 
     private onEncoders = (encoders: string[]): void => {
@@ -273,10 +274,23 @@ export class ConfigureScrcpy extends BaseClient<ParamsStreamScrcpy, ConfigureScr
             return;
         }
         heightInput.disabled = widthInput.disabled = checked;
+        heightInput.hidden = widthInput.hidden = checked;
+        const heightLabel = document.getElementById(`label_maxHeight_${this.escapedUdid}`);
+        const widthLabel = document.getElementById(`label_maxWidth_${this.escapedUdid}`);
+        if (heightLabel) {
+            heightLabel.hidden = checked;
+        }
+        if (widthLabel) {
+            widthLabel.hidden = checked;
+        }
         if (checked) {
-            heightInput.setAttribute(Attribute.VALUE, heightInput.value);
+            if (heightInput.value) {
+                heightInput.setAttribute(Attribute.VALUE, heightInput.value);
+            }
             heightInput.value = '';
-            widthInput.setAttribute(Attribute.VALUE, widthInput.value);
+            if (widthInput.value) {
+                widthInput.setAttribute(Attribute.VALUE, widthInput.value);
+            }
             widthInput.value = '';
         } else {
             const storedHeight = heightInput.getAttribute(Attribute.VALUE);
@@ -404,6 +418,18 @@ export class ConfigureScrcpy extends BaseClient<ParamsStreamScrcpy, ConfigureScr
         window.localStorage.setItem(this.playerStorageKey, playerName);
     }
 
+    private saveConfigurationPreference(): void {
+        if (this.playerName) {
+            this.setPreviouslyUsedPlayer(this.playerName);
+        }
+        if (this.displayInfo && window.localStorage) {
+            window.localStorage.setItem(
+                `configure_stream::${this.escapedUdid}::display`,
+                this.displayInfo.displayId.toString(10),
+            );
+        }
+    }
+
     private createUI(): HTMLElement {
         const dialogName = 'configureDialog';
         const blockClass = 'dialog-block';
@@ -426,6 +452,25 @@ export class ConfigureScrcpy extends BaseClient<ParamsStreamScrcpy, ConfigureScr
         deviceName.classList.add('dialog-title', 'main-title');
         deviceName.innerText = this.deviceName;
         dialogHeader.appendChild(deviceName);
+        const statusElement = document.createElement('span');
+        statusElement.classList.add('configure-status');
+        this.connectionStatusElement = statusElement;
+        this.statusText = 'Connecting...';
+        this.updateStatus();
+        dialogHeader.appendChild(statusElement);
+
+        const okButton = (this.okButton = document.createElement('button'));
+        okButton.classList.add('configure-open-button');
+        okButton.type = 'button';
+        okButton.appendChild(SvgImage.create(SvgImage.Icon.FULLSCREEN));
+        const openLabel = document.createElement('span');
+        openLabel.innerText = 'Open';
+        okButton.appendChild(openLabel);
+        okButton.disabled = true;
+        okButton.addEventListener('click', this.openStream);
+        okButton.classList.add('settings-action-button');
+        dialogHeader.appendChild(okButton);
+
         const dialogBody = (this.dialogBody = document.createElement('div'));
         dialogBody.classList.add('dialog-body', blockClass, dialogName, 'hidden');
         const playerWrapper = document.createElement('div');
@@ -481,17 +526,19 @@ export class ConfigureScrcpy extends BaseClient<ParamsStreamScrcpy, ConfigureScr
         const fitLabel = document.createElement('label');
         fitLabel.innerText = 'Fit to screen';
         fitLabel.classList.add('label');
-        controls.appendChild(fitLabel);
+        const fitToScreenRow = document.createElement('div');
+        fitToScreenRow.classList.add('control-wrapper', 'fit-to-screen-row');
+        fitToScreenRow.appendChild(fitLabel);
         const fitToggle = new ToolBoxCheckbox(
             'Fit to screen',
             { off: SvgImage.Icon.TOGGLE_OFF, on: SvgImage.Icon.TOGGLE_ON },
             'fit_to_screen',
         );
         fitToggle.getAllElements().forEach((el) => {
-            controls.appendChild(el);
+            fitToScreenRow.appendChild(el);
             if (el instanceof HTMLLabelElement) {
                 fitLabel.htmlFor = el.htmlFor;
-                el.classList.add('input');
+                el.classList.add('input', 'fit-to-screen-toggle');
             }
             if (el instanceof HTMLInputElement) {
                 this.fitToScreenCheckbox = el;
@@ -501,6 +548,7 @@ export class ConfigureScrcpy extends BaseClient<ParamsStreamScrcpy, ConfigureScr
             const element = el.getElement();
             this.onFitToScreenChanged(element.checked);
         });
+        controls.appendChild(fitToScreenRow);
         this.appendBasicInput(controls, { label: 'Max width', id: 'maxWidth' });
         this.appendBasicInput(controls, { label: 'Max height', id: 'maxHeight' });
         this.appendBasicInput(controls, { label: 'Codec options', id: 'codecOptions' });
@@ -519,47 +567,38 @@ export class ConfigureScrcpy extends BaseClient<ParamsStreamScrcpy, ConfigureScr
         dialogBody.appendChild(controls);
 
         const buttonsWrapper = document.createElement('div');
-        buttonsWrapper.classList.add('controls');
+        buttonsWrapper.classList.add('settings-footer-actions');
 
         const resetSettingsButton = (this.resetSettingsButton = document.createElement('button'));
-        resetSettingsButton.classList.add('button');
-        resetSettingsButton.innerText = 'Reset settings';
+        resetSettingsButton.classList.add('settings-action-button');
+        resetSettingsButton.appendChild(SvgImage.create(SvgImage.Icon.REFRESH));
+        const resetLabel = document.createElement('span');
+        resetLabel.innerText = 'Reset settings';
+        resetSettingsButton.appendChild(resetLabel);
         resetSettingsButton.addEventListener('click', this.resetSettings);
         buttonsWrapper.appendChild(resetSettingsButton);
 
         const loadSettingsButton = (this.loadSettingsButton = document.createElement('button'));
-        loadSettingsButton.classList.add('button');
-        loadSettingsButton.innerText = 'Load settings';
+        loadSettingsButton.classList.add('settings-action-button');
+        loadSettingsButton.appendChild(SvgImage.create(SvgImage.Icon.SETTINGS));
+        const loadLabel = document.createElement('span');
+        loadLabel.innerText = 'Load settings';
+        loadSettingsButton.appendChild(loadLabel);
         loadSettingsButton.addEventListener('click', this.loadSettings);
         buttonsWrapper.appendChild(loadSettingsButton);
 
         const saveSettingsButton = (this.saveSettingsButton = document.createElement('button'));
-        saveSettingsButton.classList.add('button');
-        saveSettingsButton.innerText = 'Save settings';
+        saveSettingsButton.classList.add('settings-action-button');
+        saveSettingsButton.appendChild(SvgImage.create(SvgImage.Icon.UPLOAD));
+        const saveLabel = document.createElement('span');
+        saveLabel.innerText = 'Save settings';
+        saveSettingsButton.appendChild(saveLabel);
         saveSettingsButton.addEventListener('click', this.saveSettings);
         buttonsWrapper.appendChild(saveSettingsButton);
 
-        dialogBody.appendChild(buttonsWrapper);
-
         const dialogFooter = document.createElement('div');
         dialogFooter.classList.add('dialog-footer', blockClass, dialogName);
-        const statusElement = document.createElement('span');
-        statusElement.classList.add('subtitle');
-        this.connectionStatusElement = statusElement;
-        dialogFooter.appendChild(statusElement);
-        this.statusText = `Connecting...`;
-        this.updateStatus();
-
-        // const cancelButton = (this.cancelButton = document.createElement('button'));
-        // cancelButton.innerText = 'Cancel';
-        // cancelButton.addEventListener('click', this.cancel);
-        const okButton = (this.okButton = document.createElement('button'));
-        okButton.innerText = 'Open';
-        okButton.disabled = true;
-        okButton.addEventListener('click', this.openStream);
-        dialogFooter.appendChild(okButton);
-        // dialogFooter.appendChild(cancelButton);
-        dialogBody.appendChild(dialogFooter);
+        dialogFooter.appendChild(buttonsWrapper);
         dialogContainer.appendChild(dialogHeader);
         dialogContainer.appendChild(dialogBody);
         dialogContainer.appendChild(dialogFooter);
@@ -612,6 +651,7 @@ export class ConfigureScrcpy extends BaseClient<ParamsStreamScrcpy, ConfigureScr
         if (videoSettings && player) {
             const fitToScreen = this.getFitToScreenValue();
             player.saveVideoSettings(this.udid, videoSettings, fitToScreen, this.displayInfo);
+            this.saveConfigurationPreference();
         }
     };
 
@@ -621,6 +661,7 @@ export class ConfigureScrcpy extends BaseClient<ParamsStreamScrcpy, ConfigureScr
             return;
         }
         const fitToScreen = this.getFitToScreenValue();
+        this.saveConfigurationPreference();
         this.detachEventsListeners(this.streamReceiver);
         this.emit('closed', { dialog: this, result: true });
         this.removeUI();
@@ -628,7 +669,6 @@ export class ConfigureScrcpy extends BaseClient<ParamsStreamScrcpy, ConfigureScr
         if (!player) {
             return;
         }
-        this.setPreviouslyUsedPlayer(this.playerName);
         // return;
         player.setVideoSettings(videoSettings, fitToScreen, false);
         const params: ParamsStreamScrcpy = {

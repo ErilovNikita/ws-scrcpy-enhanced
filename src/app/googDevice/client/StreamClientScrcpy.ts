@@ -31,6 +31,7 @@ import { StreamReceiverScrcpy } from './StreamReceiverScrcpy';
 import { ParamsDeviceTracker } from '../../../types/ParamsDeviceTracker';
 import { ScrcpyFilePushStream } from '../filePush/ScrcpyFilePushStream';
 import { ScrcpyAudioController, ScrcpyAudioFrameMode, ScrcpyAudioOptions } from '../../audio/ScrcpyAudioController';
+import SvgImage from '../../ui/SvgImage';
 
 type StartParams = {
     udid: string;
@@ -87,6 +88,8 @@ export class StreamClientScrcpy
     private player?: BasePlayer;
     private filePushHandler?: FilePushHandler;
     private fitToScreen?: boolean;
+    private hasExplicitFitToScreen = false;
+    private displaySettingsInitialized = false;
     private readonly streamReceiver: StreamReceiverScrcpy;
     private videoContainer?: HTMLElement;
     private resizeObserver?: ResizeObserver;
@@ -125,6 +128,21 @@ export class StreamClientScrcpy
 
     public static getPlayers(): PlayerClass[] {
         return Array.from(this.players.values());
+    }
+
+    public static getPreferredPlayerName(udid: string): string | undefined {
+        const key = `configure_stream::${Util.escapeUdid(udid)}::player`;
+        const savedPlayer = window.localStorage?.getItem(key);
+        if (savedPlayer && this.getPlayerClass(savedPlayer)) {
+            return savedPlayer;
+        }
+        return this.getPlayers()[0]?.playerFullName;
+    }
+
+    private static getPreferredDisplayId(udid: string): number | undefined {
+        const key = `configure_stream::${Util.escapeUdid(udid)}::display`;
+        const displayId = Number.parseInt(window.localStorage?.getItem(key) || '', 10);
+        return Number.isInteger(displayId) && displayId >= 0 ? displayId : undefined;
     }
 
     private static getPlayerClass(playerName: string): PlayerClass | undefined {
@@ -276,17 +294,57 @@ export class StreamClientScrcpy
         }
         let currentSettings = this.player.getVideoSettings();
         const displayId = currentSettings.displayId;
-        const info = infoArray.find((value) => {
+        let info = infoArray.find((value) => {
             return value.displayInfo.displayId === displayId;
         });
         if (!info) {
-            return;
+            info =
+                infoArray.find((value) => value.displayInfo.displayId === DisplayInfo.DEFAULT_DISPLAY) ||
+                infoArray[0];
+            if (!info) {
+                return;
+            }
+            currentSettings = new VideoSettings({
+                crop: currentSettings.crop,
+                bitrate: currentSettings.bitrate,
+                bounds: currentSettings.bounds,
+                maxFps: currentSettings.maxFps,
+                iFrameInterval: currentSettings.iFrameInterval,
+                sendFrameMeta: currentSettings.sendFrameMeta,
+                lockedVideoOrientation: currentSettings.lockedVideoOrientation,
+                displayId: info.displayInfo.displayId,
+                codecOptions: currentSettings.codecOptions,
+                encoderName: currentSettings.encoderName,
+            });
+            this.player.setVideoSettings(currentSettings, this.fitToScreen || false, false);
         }
         if (this.player.getState() === BasePlayer.STATE.PAUSED) {
             this.player.play();
         }
         const { videoSettings, screenInfo } = info;
         this.player.setDisplayInfo(info.displayInfo);
+        if (!this.displaySettingsInitialized) {
+            this.displaySettingsInitialized = true;
+            if (!this.hasExplicitFitToScreen) {
+                this.fitToScreen = this.player.getFitToScreenStatus();
+            }
+            if (info.connectionCount === 0) {
+                const loadedSettings = this.player.loadVideoSettings();
+                currentSettings = new VideoSettings({
+                    crop: loadedSettings.crop,
+                    bitrate: loadedSettings.bitrate,
+                    bounds: loadedSettings.bounds,
+                    maxFps: loadedSettings.maxFps,
+                    iFrameInterval: loadedSettings.iFrameInterval,
+                    sendFrameMeta: loadedSettings.sendFrameMeta,
+                    lockedVideoOrientation: loadedSettings.lockedVideoOrientation,
+                    displayId: info.displayInfo.displayId,
+                    codecOptions: loadedSettings.codecOptions,
+                    encoderName: loadedSettings.encoderName,
+                });
+                this.player.setVideoSettings(currentSettings, this.fitToScreen || false, false);
+            }
+        }
         if (typeof this.fitToScreen !== 'boolean') {
             this.fitToScreen = this.player.getFitToScreenStatus();
         }
@@ -412,6 +470,8 @@ export class StreamClientScrcpy
         }
 
         this.fitToScreen = fitToScreen;
+        this.hasExplicitFitToScreen = typeof fitToScreen === 'boolean';
+        this.displaySettingsInitialized = false;
         this.initialAutoFitApplied = false;
         if (!player) {
             if (typeof playerName !== 'string') {
@@ -435,6 +495,22 @@ export class StreamClientScrcpy
 
         if (!videoSettings) {
             videoSettings = player.getVideoSettings();
+            const preferredDisplayId = StreamClientScrcpy.getPreferredDisplayId(udid);
+            if (typeof preferredDisplayId === 'number' && preferredDisplayId !== videoSettings.displayId) {
+                videoSettings = new VideoSettings({
+                    crop: videoSettings.crop,
+                    bitrate: videoSettings.bitrate,
+                    bounds: videoSettings.bounds,
+                    maxFps: videoSettings.maxFps,
+                    iFrameInterval: videoSettings.iFrameInterval,
+                    sendFrameMeta: videoSettings.sendFrameMeta,
+                    lockedVideoOrientation: videoSettings.lockedVideoOrientation,
+                    displayId: preferredDisplayId,
+                    codecOptions: videoSettings.codecOptions,
+                    encoderName: videoSettings.encoderName,
+                });
+            }
+            player.setVideoSettings(videoSettings, this.fitToScreen || false, false);
         }
         this.savedVideoSettingsApplied = false;
         this.savedVideoSettings = StreamClientScrcpy.readSavedVideoSettings(player.getName(), udid, videoSettings.displayId);
@@ -678,8 +754,8 @@ export class StreamClientScrcpy
             document.documentElement.clientWidth || document.body.clientWidth || window.innerWidth;
         const viewportHeight =
             document.documentElement.clientHeight || document.body.clientHeight || window.innerHeight;
-        const width = ((viewportWidth - this.controlButtons.clientWidth) * dpr) & ~15;
-        const height = (viewportHeight * dpr) & ~15;
+        const width = (viewportWidth * dpr) & ~15;
+        const height = ((viewportHeight - this.controlButtons.offsetHeight) * dpr) & ~15;
         return new Size(width, height);
     }
 
@@ -866,7 +942,14 @@ export class StreamClientScrcpy
                 </button>
             </div>`;
             const a = e.content.getElementById(configureButtonId);
-            a && (a.onclick = this.onConfigureStreamClick);
+            if (a) {
+                a.onclick = this.onConfigureStreamClick;
+                const label = document.createElement('span');
+                label.innerText = 'Configure stream';
+                a.innerText = '';
+                a.appendChild(label);
+                a.prepend(SvgImage.create(SvgImage.Icon.SETTINGS));
+            }
             return e.content;
         }
         return;

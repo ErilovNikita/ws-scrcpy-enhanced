@@ -81,8 +81,37 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
         const name = option.getAttribute(Attribute.NAME) || '';
         const fullName = decodeURIComponent(selectElement.getAttribute(Attribute.FULL_NAME) || '');
         const udid = selectElement.getAttribute(Attribute.UDID) || '';
+        const card = selectElement.closest<HTMLElement>('.device');
+        if (card) {
+            this.refreshStreamLink(card, udid, url);
+        }
         this.updateLink({ url, name, fullName, udid, store: true });
     };
+
+    private refreshStreamLink(card: HTMLElement, udid: string, selectedUrl?: string): void {
+        const streamLink = card.querySelector<HTMLAnchorElement>('.device-stream-link');
+        const streamSelect = Array.from(card.querySelectorAll<HTMLSelectElement>('select')).find(
+            (select) => select.getAttribute(Attribute.UDID) === udid,
+        );
+        const streamUrl = selectedUrl || streamSelect?.selectedOptions[0]?.getAttribute(Attribute.URL);
+        const preferredPlayer = StreamClientScrcpy.getPreferredPlayerName(udid);
+        const player =
+            StreamClientScrcpy.getPlayers().find((item) => item.playerFullName === preferredPlayer) ||
+            StreamClientScrcpy.getPlayers()[0];
+        if (streamLink && streamUrl && player) {
+            const ws = selectedUrl === undefined ? decodeURI(streamUrl) : selectedUrl;
+            streamLink.href = this.getStreamHref(udid, player.playerCodeName, ws);
+        }
+    }
+
+    private getStreamHref(udid: string, player: string, ws: string): string {
+        const link = DeviceTracker.buildLink(
+            { action: ACTION.STREAM_SCRCPY, udid, player, ws },
+            'Open stream',
+            this.params,
+        );
+        return link.href;
+    }
 
     private updateLink(params: { url: string; name: string; fullName: string; udid: string; store: boolean }): void {
         const { url, name, fullName, udid, store } = params;
@@ -193,14 +222,22 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
         let hasPid = false;
         const servicesId = `device_services_${fullName}`;
         const row = html`<div class="device ${isActive ? 'active' : 'not-active'}">
-            <div class="device-header">
-                <div class="device-name">${device['ro.product.manufacturer']} ${device['ro.product.model']}</div>
-                <div class="device-serial">${device.udid}</div>
-                <div class="device-version">
-                    <div class="release-version">${device['ro.build.version.release']}</div>
-                    <div class="sdk-version">${device['ro.build.version.sdk']}</div>
+            <div class="device-header device-header-android">
+                <div class="device-title-row">
+                    <div class="device-name">
+                        <span>${device['ro.product.manufacturer']} ${device['ro.product.model']}</span>
+                    </div>
+                    <div class="device-state" title="State: ${device.state}"></div>
                 </div>
-                <div class="device-state" title="State: ${device.state}"></div>
+                <div class="device-version-tags">
+                    <div class="device-version">
+                        <div class="release-version">Android ${device['ro.build.version.release']}</div>
+                    </div>
+                    <div class="device-version">
+                        <div class="sdk-version">SDK ${device['ro.build.version.sdk']}</div>
+                    </div>
+                </div>
+                <div class="device-settings-row"></div>
             </div>
             <div id="${servicesId}" class="services"></div>
         </div>`.content;
@@ -347,8 +384,44 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
             });
         }
 
+        this.addDeviceSettings(
+            row,
+            services,
+            `${device['ro.product.manufacturer']} ${device['ro.product.model']}`.trim(),
+            fullName,
+        );
+        const card = row.querySelector<HTMLElement>('.device');
+        if (card && isActive && selectedInterfaceUrl) {
+            card.classList.add('stream-launchable');
+            const preferredPlayer = StreamClientScrcpy.getPreferredPlayerName(device.udid);
+            const player =
+                StreamClientScrcpy.getPlayers().find((item) => item.playerFullName === preferredPlayer) ||
+                StreamClientScrcpy.getPlayers()[0];
+            if (player) {
+                const streamLink = document.createElement('a');
+                streamLink.className = 'device-stream-link';
+                streamLink.href = this.getStreamHref(device.udid, player.playerCodeName, selectedInterfaceUrl);
+                streamLink.setAttribute(
+                    'aria-label',
+                    `Open stream for ${device['ro.product.manufacturer']} ${device['ro.product.model']}`.trim(),
+                );
+                const titleRow = card.querySelector('.device-title-row');
+                if (titleRow) {
+                    const openHint = document.createElement('span');
+                    openHint.className = 'device-open-hint';
+                    openHint.title = 'Open stream';
+                    openHint.setAttribute('aria-hidden', 'true');
+                    openHint.appendChild(SvgImage.create(SvgImage.Icon.FULLSCREEN));
+                    titleRow.appendChild(openHint);
+                }
+                streamLink.addEventListener('click', () => {
+                    this.refreshStreamLink(card, device.udid);
+                });
+                card.prepend(streamLink);
+            }
+        }
         tbody.appendChild(row);
-        if (DeviceTracker.CREATE_DIRECT_LINKS && hasPid && selectedInterfaceUrl) {
+        if (DeviceTracker.CREATE_DIRECT_LINKS && isActive && selectedInterfaceUrl) {
             this.updateLink({
                 url: selectedInterfaceUrl,
                 name: selectedInterfaceName,

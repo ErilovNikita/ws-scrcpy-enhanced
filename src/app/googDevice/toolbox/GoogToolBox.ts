@@ -14,31 +14,31 @@ const BUTTONS = [
         code: KeyEvent.KEYCODE_POWER,
         icon: SvgImage.Icon.POWER,
     },
-    {
-        title: 'Volume up',
-        code: KeyEvent.KEYCODE_VOLUME_UP,
-        icon: SvgImage.Icon.VOLUME_UP,
-    },
-    {
-        title: 'Volume down',
-        code: KeyEvent.KEYCODE_VOLUME_DOWN,
-        icon: SvgImage.Icon.VOLUME_DOWN,
-    },
-    {
-        title: 'Back',
-        code: KeyEvent.KEYCODE_BACK,
-        icon: SvgImage.Icon.BACK,
-    },
-    {
-        title: 'Home',
-        code: KeyEvent.KEYCODE_HOME,
-        icon: SvgImage.Icon.HOME,
-    },
-    {
-        title: 'Overview',
-        code: KeyEvent.KEYCODE_APP_SWITCH,
-        icon: SvgImage.Icon.OVERVIEW,
-    },
+    // {
+    //     title: 'Volume up',
+    //     code: KeyEvent.KEYCODE_VOLUME_UP,
+    //     icon: SvgImage.Icon.VOLUME_UP,
+    // },
+    // {
+    //     title: 'Volume down',
+    //     code: KeyEvent.KEYCODE_VOLUME_DOWN,
+    //     icon: SvgImage.Icon.VOLUME_DOWN,
+    // },
+    // {
+    //     title: 'Back',
+    //     code: KeyEvent.KEYCODE_BACK,
+    //     icon: SvgImage.Icon.BACK,
+    // },
+    // {
+    //     title: 'Home',
+    //     code: KeyEvent.KEYCODE_HOME,
+    //     icon: SvgImage.Icon.HOME,
+    // },
+    // {
+    //     title: 'Overview',
+    //     code: KeyEvent.KEYCODE_APP_SWITCH,
+    //     icon: SvgImage.Icon.OVERVIEW,
+    // },
 ];
 
 export class GoogToolBox extends ToolBox {
@@ -145,7 +145,9 @@ export class GoogToolBox extends ToolBox {
             });
 
             if (holder) {
-                holder.style.width = isChecked ? '0' : '';
+                holder.style.height = isChecked ? '0' : '';
+                holder.style.minHeight = isChecked ? '0' : '';
+                holder.style.padding = isChecked ? '0' : '';
             }
 
             const label = toggleSidebar.getAllElements()[1];
@@ -156,8 +158,12 @@ export class GoogToolBox extends ToolBox {
                         label.style.top = '0';
                         label.style.zIndex = '100';
                         label.style.margin = '0';
+                        label.style.padding = '10px';
+                        label.style.borderRadius = '50%';
+                        label.style.height = '40px';
+                        label.style.width = '40px';
                         label.style.backgroundColor = 'var(--control-buttons-bg-color)';
-                        label.style.opacity = '0.5';
+                        label.style.opacity = '0.75';
                     } else {
                         label.style.position = '';
                         label.style.right = '';

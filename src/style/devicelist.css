@@ -1,31 +1,66 @@
 :root {
-    --device-border-color: hsl(0, 0%, 82%);
-    --device-list-stripe-color: hsl(0, 0%, 96%);
+    --device-border-color: hsl(216, 20%, 88%);
+    --device-list-stripe-color: hsl(216, 30%, 98%);
     --device-list-default-color: hsl(0, 0%, 100%);
-    --device-list-hover-color: hsl(218, 67%, 95%);
+    --device-list-hover-color: hsl(210, 60%, 97%);
+    --device-surface-color: hsl(0, 0%, 100%);
+    --device-page-color: hsl(216, 33%, 97%);
+    --device-muted-color: hsl(215, 14%, 48%);
+    --device-accent-color: hsl(207, 87%, 48%);
+    --device-status-color: hsl(145, 62%, 38%);
+    --device-status-bg-color: hsl(145, 47%, 94%);
 }
-
-@media (prefers-color-scheme: dark) {
-    :root {
-        --device-border-color: hsl(0, 0%, 32%);
-        --device-list-stripe-color: hsl(0, 0%, 16%);
-        --device-list-default-color: hsl(0, 0%, 14%);
-        --device-list-hover-color: hsl(218, 17%, 18%);
-    }
-}
-
 
 body.list {
+    color-scheme: light;
+    --main-bg-color: hsl(0, 0%, 100%);
+    --header-bg-color: hsl(216, 33%, 97%);
+    --controls-bg-color: hsl(0, 0%, 100%);
+    --control-buttons-bg-color: hsl(0, 0%, 100%);
+    --text-color: hsl(215, 28%, 18%);
+    --text-color-light: hsl(215, 14%, 48%);
+    --link-color: hsl(207, 87%, 40%);
+    --link-color-light: hsl(207, 65%, 55%);
+    --link-color_visited: hsl(267, 42%, 48%);
+    --link-color_visited-light: hsl(267, 35%, 60%);
+    --button-text-color: hsl(207, 87%, 40%);
+    --button-border-color: hsl(216, 20%, 82%);
+    position: relative;
+    min-height: 100%;
     height: auto;
     width: auto;
     overflow: auto;
+    background-color: var(--device-page-color);
+    font-family: "Segoe UI", "Segoe UI Variable", system-ui, sans-serif;
 }
 
-#devices {
-    padding: 20px 0;
-    width: 100%;
-    height: calc(100% - 40px);
-    overflow-y: auto;
+body.list #devices {
+    box-sizing: border-box;
+    width: min(1200px, calc(100% - 64px));
+    height: auto;
+    min-height: 100vh;
+    margin: 0 auto;
+    padding: 48px 0 64px;
+    overflow: visible;
+}
+
+body.list #devices::before {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--text-color);
+    content: "Devices";
+    font-size: 30px;
+    font-weight: 650;
+    letter-spacing: -0.035em;
+    line-height: 1.25;
+}
+
+body.list #devices::after {
+    display: block;
+    margin-bottom: 30px;
+    color: var(--device-muted-color);
+    content: "Connect to and manage your devices";
+    font-size: 14px;
 }
 
 body.stream #devices {
@@ -49,187 +84,538 @@ body.list #device_list_menu {
     z-index: 4;
 }
 
-#devices .device-list button {
-    font-size: var(--font-size);
-    color: var(--button-text-color);
-}
-
-#devices .device-list div.device:nth-child(2n+1){
-    background-color: var(--device-list-default-color);
-}
-
-#devices .device-list div.device:nth-child(2n){
-    background-color: var(--device-list-stripe-color);
-}
-
-#devices .device-header {
-    padding: 2px 0;
-}
-
-#devices .device-header div {
-    display: inline-flex;
-}
-
-#devices .device-name {
-    font-size: 120%;
-}
-
-#devices .device-model {
-    font-size: 110%;
-}
-
-#devices .device-serial {
-    color: var(--url-color);
-    font-size: 80%;
-    margin-left: 6px;
-}
-
-#devices .device-version {
-    font-size: 100%;
-    margin-left: 6px;
-    align-items: baseline;
-}
-
-#devices .device-version .sdk-version {
-    font-size: 75%;
-    color: var(--url-color);
-    margin-left: 0.2em;
-}
-
-#devices .device-state {
-    border-radius: 25px;
-    background-color: red;
-    font-size: 80%;
-    margin-left: 6px;
-    width: 1em;
-    height: 1em;
-}
-
-#devices .device.active .device-state {
-    background-color: green;
-}
-
-#devices .device-list {
-    position: relative;
-    bottom: 0;
-    left: 0;
+body.list #devices .device-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+    gap: 16px;
     width: 100%;
-}
-
-#devices .device-list {
+    margin: 0;
+    border: 0;
     border-spacing: 0;
-    border-collapse: collapse;
-    font-family: monospace;
+    border-collapse: separate;
+    font-family: inherit;
     font-size: var(--font-size);
 }
 
-#devices .device-list div.device {
-    padding: 5px 20px 5px;
+body.list #devices .device-list > div {
+    display: contents;
 }
 
-#devices .device-list div.device:hover {
-    background-color: var(--device-list-hover-color)
+body.list #devices .tracker-name {
+    grid-column: 1 / -1;
+    margin: 8px 0 0;
+    padding: 0 0 10px;
+    border-bottom: 1px solid var(--device-border-color);
+    color: var(--device-muted-color);
+    font-size: 12px;
+    font-weight: 650;
+    letter-spacing: .07em;
+    text-transform: uppercase;
 }
 
-#devices .device-list div.device select {
-    color: var(--text-color);
-    background-color: var(--main-bg-color);
-    margin-left: 0;
-    border: none;
-}
-
-#devices .device-list div.device:hover select {
-    background-color: var(--device-list-hover-color);;
-}
-
-#devices .device-list div.desc-block {
-    margin: .3em;
-    display: inline-flex;
-}
-
-#devices .device-list div.desc-block.hidden {
-    display: none;
-}
-
-#devices .device-list div.desc-block.stream,
-#devices .device-list div.desc-block.server_pid,
-#devices .device-list div.desc-block.net_interface {
+body.list #devices .device-list .device {
+    box-sizing: border-box;
+    position: relative;
+    min-width: 0;
+    padding: 18px;
     border: 1px solid var(--device-border-color);
-    border-radius: .3em;
-    overflow: hidden;
-    white-space: nowrap;
+    border-radius: 12px;
+    background: var(--device-surface-color);
+    box-shadow: 0 2px 6px hsla(220, 30%, 20%, .045), 0 10px 24px hsla(220, 30%, 20%, .035);
+    transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
 }
 
-#devices .device-list div.device div.desc-block.stream button.action-button {
-    color: var(--button-text-color);
+body.list #devices .device-list .device:hover {
+    border-color: color-mix(in srgb, var(--device-accent-color) 45%, var(--device-border-color));
+    background: var(--device-surface-color);
+    box-shadow: 0 4px 12px hsla(220, 30%, 20%, .07), 0 14px 30px hsla(220, 30%, 20%, .06);
 }
 
-#devices .device-list div.desc-block button {
-    fill: var(--text-color)
-}
-
-#devices .device-list div.desc-block button > span {
-    padding: 0 .5em;
-}
-
-#devices .device-list div.desc-block button > span,
-#devices .device-list div.desc-block button > svg {
-    vertical-align: middle;
-}
-
-#devices .device-list div.desc-block button > svg {
-    width: var(--font-size);
-    height: var(--font-size);
-}
-
-#devices .device-list div.desc-block button > svg > path {
-    fill: var(--text-color);
-}
-
-#devices .device-list .device.not-active div.desc-block button > svg > path {
-    fill: var(--text-color-light);
-}
-
-#devices .device-list .device.not-active select {
-    color: var(--text-color-light);
-}
-
-#devices .device-list .device.not-active {
-    color: var(--text-color-light);
-}
-
-#devices .device-list .device.not-active a {
-    color: var(--link-color-light);
-}
-
-#devices .device-list .device.not-active a:visited {
-    color: var(--link-color_visited-light);
-}
-
-#devices .device-list div.device div.desc-block .action-button {
-    border: none;
-    background-color: rgba(0, 0, 0, 0);
-    color: inherit;
-}
-
-#devices .device-list div.device div.desc-block .action-button.update-interfaces-button {
-    margin-right: 0;
-}
-
-#devices .device-list div.device div.desc-block .action-button.active {
+body.list #devices .device-list .device.stream-launchable {
     cursor: pointer;
 }
 
-#devices .device-list .device.active div.desc-block .action-button:hover {
-    color: var(--kill-button-hover-color);
+body.list #devices .device-list .device.stream-launchable:focus-within {
+    outline: 2px solid var(--device-accent-color);
+    outline-offset: 3px;
 }
 
-#devices .device-list .device.active div.desc-block button.action-button:hover > svg > path {
-    fill: var(--kill-button-hover-color);
+body.list #devices .device-stream-link {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
 }
 
-#devices .tracker-name {
-    padding: 5px 20px 5px;
-    font-size: larger;
-    font-weight: bolder;
+body.list #devices .device-header {
+    display: flex;
+    position: relative;
+    z-index: 1;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 7px 10px;
+    min-width: 0;
+    pointer-events: none;
+}
+
+body.list #devices .device-header.device-header-android {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+}
+
+body.list #devices .device-header > .device-title-row {
+    display: flex;
+}
+
+body.list #devices .device-header > .device-version-tags {
+    display: flex;
+}
+
+body.list #devices .device-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+body.list #devices .device-open-hint {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    color: var(--device-muted-color);
+    opacity: .7;
+}
+
+body.list #devices .device-open-hint > svg {
+    display: block;
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+}
+
+body.list #devices .device-version-tags {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 7px;
+    min-width: 0;
+}
+
+body.list #devices .device-header > div {
+    display: inline-flex;
+}
+
+body.list #devices .device-name {
+    flex: 1 1 auto;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text-color);
+    font-size: 17px;
+    font-weight: 650;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+body.list #devices .device-model {
+    color: var(--device-muted-color);
+    font-size: 13px;
+}
+
+body.list #devices .device-serial {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--device-muted-color);
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+body.list #devices .device-version {
+    display: inline-flex;
+    align-items: baseline;
+    margin-left: 0;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: var(--device-page-color);
+    color: var(--device-muted-color);
+    font-size: 12px;
+}
+
+body.list #devices .device-version .sdk-version {
+    margin-left: .35em;
+    color: var(--device-muted-color);
+    font-size: 10px;
+}
+
+body.list #devices .device-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    width: auto;
+    height: auto;
+    flex: 0 0 auto;
+    margin-left: auto;
+    border-radius: 0;
+    background: transparent;
+    color: var(--device-muted-color);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+body.list #devices .device-state::before {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background-color: hsl(215, 10%, 62%);
+    content: "";
+}
+
+body.list #devices .device-state::after {
+    content: "Offline";
+}
+
+body.list #devices .device.active .device-state {
+    color: var(--device-status-color);
+}
+
+body.list #devices .device.active .device-state::before {
+    background-color: hsl(145, 62%, 42%);
+    box-shadow: 0 0 0 3px var(--device-status-bg-color);
+}
+
+body.list #devices .device.active .device-state::after {
+    content: "Available";
+}
+
+body.list #devices .device-list .device.not-active {
+    color: var(--device-muted-color);
+}
+
+body.list #devices .device-list .device.not-active select {
+    color: var(--device-muted-color);
+}
+
+body.list #devices .device-list .device.not-active a {
+    color: var(--link-color-light);
+}
+
+body.list #devices .device-list .device.not-active a:visited {
+    color: var(--link-color_visited-light);
+}
+
+body.list #devices .device-list div.services {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-height: 36px;
+}
+
+body.list #devices .device-list div.desc-block {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    margin: 0;
+    overflow: hidden;
+    background: var(--device-surface-color);
+}
+
+body.list #devices .device-list div.desc-block.hidden {
+    display: none;
+}
+
+body.list #devices .device-list div.desc-block button,
+body.list #devices .device-list div.desc-block select {
+    color: var(--text-color);
+}
+
+body.list #devices .device-list div.desc-block select {
+    max-width: 180px;
+    margin: 0;
+    padding: 6px 8px;
+    border: 0;
+    background: transparent;
+}
+
+body.list #devices .device-list div.desc-block button {
+    fill: currentColor;
+}
+
+body.list #devices .device-list div.desc-block button > span {
+    padding: 0 8px;
+}
+
+body.list #devices .device-list div.desc-block button > span,
+body.list #devices .device-list div.desc-block button > svg {
+    vertical-align: middle;
+}
+
+body.list #devices .device-list div.desc-block button > svg {
+    width: 14px;
+    height: 14px;
+}
+
+body.list #devices .device-list div.desc-block button > svg > path {
+    fill: var(--text-color);
+}
+
+body.list #devices .device-list .device.not-active div.desc-block button > svg > path {
+    fill: var(--device-muted-color);
+}
+
+body.list #devices .device-list div.device div.desc-block .action-button {
+    padding: 6px 8px;
+    border: 0;
+    background: transparent;
+    color: inherit;
+}
+
+body.list #devices .device-list div.device div.desc-block .action-button.update-interfaces-button {
+    margin-right: 0;
+}
+
+body.list #devices .device-list div.device div.desc-block .action-button.active {
+    cursor: pointer;
+}
+
+body.list #devices .device-list .device.active div.desc-block .action-button:hover {
+    color: var(--device-accent-color);
+}
+
+body.list #devices .device-list .device.active div.desc-block button.action-button:hover > svg > path {
+    fill: var(--device-accent-color);
+}
+
+body.list #devices .device-list button {
+    font-size: var(--font-size);
+}
+
+body.list #devices .device-list button:focus-visible,
+body.list #devices .device-list select:focus-visible {
+    outline: 2px solid var(--device-accent-color);
+    outline-offset: 2px;
+}
+
+body.list #devices .device-settings-trigger {
+    display: inline-flex;
+    position: relative;
+    z-index: 1;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    margin-left: auto;
+    width: 30px;
+    height: 30px;
+    padding: 6px;
+    border: 1px solid var(--device-border-color);
+    border-radius: 7px;
+    background: var(--device-surface-color);
+    color: var(--device-accent-color);
+    font: inherit;
+    cursor: pointer;
+    pointer-events: auto;
+}
+
+body.list #devices .device-settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    min-width: 0;
+}
+
+body.list #devices .device-header.device-header-android .device-settings-trigger {
+    margin-left: 0;
+}
+
+body.list #devices .device-settings-trigger > svg {
+    display: block;
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+}
+
+body.list #devices .device-settings-trigger:hover {
+    border-color: var(--device-accent-color);
+    background: var(--device-list-hover-color);
+}
+
+body.list #devices .device-settings-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: hsla(215, 28%, 18%, .38);
+    backdrop-filter: blur(3px);
+}
+
+body.list #devices .device-settings-overlay[hidden] {
+    display: none;
+}
+
+body.list #devices .device-settings-dialog {
+    box-sizing: border-box;
+    width: min(620px, 100%);
+    max-height: min(760px, 100%);
+    overflow: auto;
+    border: 1px solid var(--device-border-color);
+    border-radius: 14px;
+    background: var(--device-surface-color);
+    box-shadow: 0 20px 60px hsla(215, 28%, 18%, .24);
+}
+
+body.list #devices .device-settings-header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--device-border-color);
+    background: var(--device-surface-color);
+}
+
+body.list #devices .device-settings-title {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text-color);
+    font-size: 18px;
+    font-weight: 650;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+body.list #devices .device-settings-close {
+    flex: 0 0 auto;
+    padding: 7px 11px;
+    border: 1px solid var(--device-border-color);
+    border-radius: 7px;
+    background: var(--device-surface-color);
+    color: var(--text-color);
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+body.list #devices .device-settings-content {
+    padding: 20px 22px 24px;
+}
+
+body.list #devices .device-settings-content .services {
+    padding-top: 0;
+    border-top: 0;
+}
+
+body.list #devices .device-settings-content .desc-block {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+}
+
+body.list #devices .device-settings-content .desc-block > a,
+body.list #devices .device-settings-content .desc-block > button,
+body.list #devices .device-settings-content .desc-block > .action-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    min-height: 38px;
+    padding: 0px 12px;
+    border: 1px solid var(--device-border-color);
+    border-radius: 8px;
+    background: var(--device-surface-color);
+    color: var(--text-color);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 550;
+    line-height: 1.2;
+    text-decoration: none;
+    cursor: pointer;
+    transition: border-color .15s ease, background-color .15s ease, color .15s ease;
+}
+
+body.list #devices .device-settings-content .desc-block > a:hover,
+body.list #devices .device-settings-content .desc-block > button:hover,
+body.list #devices .device-settings-content .desc-block > .action-button:hover {
+    border-color: var(--device-accent-color);
+    background: var(--device-list-hover-color);
+    color: var(--device-accent-color);
+}
+
+body.list #devices .device-settings-content .desc-block > a > svg,
+body.list #devices .device-settings-content .desc-block > button > svg {
+    flex: 0 0 auto;
+    width: 17px;
+    height: 17px;
+    fill: currentColor;
+}
+
+body.list #devices .device-settings-content .desc-block > a > svg path,
+body.list #devices .device-settings-content .desc-block > button > svg path {
+    fill: currentColor;
+}
+
+body.list #devices .device-settings-content .desc-block > a > span {
+    padding: 0;
+}
+
+body.list #devices .device-settings-content .desc-block > select {
+    min-height: 38px;
+    padding: 7px 10px;
+    border: 1px solid var(--device-border-color);
+    border-radius: 8px;
+    background: var(--device-surface-color);
+    color: var(--text-color);
+    font: inherit;
+    font-size: 13px;
+}
+
+body.list #devices .device-settings-content .desc-block > button:disabled {
+    color: var(--device-muted-color);
+    cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+    body.list #devices {
+        width: calc(100% - 32px);
+        padding: 32px 0 48px;
+    }
+
+    body.list #devices::before {
+        font-size: 26px;
+    }
+
+    body.list #devices .device-list .device {
+        padding: 15px;
+    }
+
+    body.list #devices .device-settings-overlay {
+        padding: 12px;
+    }
+
+    body.list #devices .device-settings-header,
+    body.list #devices .device-settings-content {
+        padding-right: 16px;
+        padding-left: 16px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body.list #devices .device-list > div.device {
+        transition: none;
+    }
+
 }

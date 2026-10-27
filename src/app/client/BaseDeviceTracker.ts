@@ -9,6 +9,8 @@ import { HostItem } from '../../types/Configuration';
 import { Tool } from './Tool';
 import Util from '../Util';
 import { EventMap } from '../../common/TypedEmitter';
+import SvgImage, { Icon } from '../ui/SvgImage';
+import { ACTION } from '../../common/Action';
 
 const TAG = '[BaseDeviceTracker]';
 
@@ -65,7 +67,22 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
         a.setAttribute('rel', 'noopener noreferrer');
         a.setAttribute('target', '_blank');
         a.classList.add(`link-${q.action}`);
-        a.innerText = text;
+        const iconByAction: Record<string, Icon> = {
+            [ACTION.SHELL]: Icon.KEYBOARD,
+            [ACTION.DEVTOOLS]: Icon.SETTINGS,
+            [ACTION.FILE_LISTING]: Icon.UPLOAD,
+            [ACTION.STREAM_SCRCPY]: Icon.FULLSCREEN,
+            [ACTION.STREAM_WEBRTC]: Icon.FULLSCREEN,
+            [ACTION.STREAM_WS_QVH]: Icon.FULLSCREEN,
+            [ACTION.STREAM_MJPEG]: Icon.FULLSCREEN,
+        };
+        const icon = iconByAction[q.action];
+        if (icon !== undefined) {
+            a.appendChild(SvgImage.create(icon));
+        }
+        const label = document.createElement('span');
+        label.innerText = text;
+        a.appendChild(label);
         return a;
     }
 
@@ -142,6 +159,98 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
     }
 
     protected abstract buildDeviceRow(tbody: Element, device: DD): void;
+
+    protected addDeviceSettings(row: DocumentFragment, services: HTMLElement, deviceName: string, id: string): void {
+        const settingsRow = row.querySelector('.device-settings-row') || row.querySelector('.device-header');
+        if (!settingsRow) {
+            return;
+        }
+
+        const trigger = document.createElement('button');
+        trigger.className = 'device-settings-trigger';
+        trigger.type = 'button';
+        trigger.appendChild(SvgImage.create(Icon.SETTINGS));
+        trigger.setAttribute('aria-label', `Device settings for ${deviceName}`);
+        trigger.title = `Device settings for ${deviceName}`;
+        trigger.setAttribute('aria-haspopup', 'dialog');
+        trigger.setAttribute('aria-expanded', 'false');
+
+        const overlay = document.createElement('div');
+        overlay.className = 'device-settings-overlay';
+        overlay.hidden = true;
+
+        const dialog = document.createElement('section');
+        dialog.className = 'device-settings-dialog';
+        dialog.setAttribute('role', 'dialog');
+        dialog.setAttribute('aria-modal', 'true');
+        dialog.setAttribute('aria-labelledby', `${id}_settings_title`);
+
+        const dialogHeader = document.createElement('div');
+        dialogHeader.className = 'device-settings-header';
+
+        const title = document.createElement('div');
+        title.className = 'device-settings-title';
+        title.id = `${id}_settings_title`;
+        title.innerText = deviceName;
+
+        const closeButton = document.createElement('button');
+        closeButton.className = 'device-settings-close';
+        closeButton.type = 'button';
+        closeButton.innerText = 'Close';
+        closeButton.setAttribute('aria-label', `Close settings for ${deviceName}`);
+
+        const content = document.createElement('div');
+        content.className = 'device-settings-content';
+        content.appendChild(services);
+
+        const close = (): void => {
+            overlay.hidden = true;
+            trigger.setAttribute('aria-expanded', 'false');
+            trigger.focus();
+        };
+
+        trigger.addEventListener('click', () => {
+            overlay.hidden = false;
+            trigger.setAttribute('aria-expanded', 'true');
+            closeButton.focus();
+        });
+        closeButton.addEventListener('click', close);
+        overlay.addEventListener('click', (event: MouseEvent) => {
+            if (event.target === overlay) {
+                close();
+            } else if (event.target instanceof Element && event.target.closest('button, a')) {
+                close();
+            }
+        });
+        overlay.addEventListener('keydown', (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                close();
+                return;
+            }
+            if (event.key === 'Tab') {
+                const focusable = Array.from(
+                    dialog.querySelectorAll<HTMLElement>(
+                        'button:not([disabled]), a[href], select:not([disabled]), input:not([disabled])',
+                    ),
+                );
+                const first = focusable[0];
+                const last = focusable[focusable.length - 1];
+                if (event.shiftKey && document.activeElement === first) {
+                    event.preventDefault();
+                    last?.focus();
+                } else if (!event.shiftKey && document.activeElement === last) {
+                    event.preventDefault();
+                    first?.focus();
+                }
+            }
+        });
+
+        dialogHeader.append(title, closeButton);
+        dialog.append(dialogHeader, content);
+        overlay.appendChild(dialog);
+        settingsRow.appendChild(trigger);
+        row.appendChild(overlay);
+    }
 
     protected onSocketClose(event: CloseEvent): void {
         if (this.destroyed) {

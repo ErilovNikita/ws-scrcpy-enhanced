@@ -44,7 +44,7 @@ export class DeviceTracker extends BaseDeviceTracker<ApplDeviceDescriptor, never
         const servicesId = `device_services_${fullName}`;
         const row = html`<div class="device ${isActive ? 'active' : 'not-active'}">
             <div class="device-header">
-                <div class="device-name">"${device.name}"</div>
+                <div class="device-name">${device.name}</div>
                 <div class="device-model">${device.model}</div>
                 <div class="device-serial">${device.udid}</div>
                 <div class="device-version">
@@ -71,6 +71,7 @@ export class DeviceTracker extends BaseDeviceTracker<ApplDeviceDescriptor, never
                 }
             }
         });
+        this.addDeviceSettings(row, services, device.name, fullName);
         tbody.appendChild(row);
     }
 
