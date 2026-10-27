@@ -15,6 +15,7 @@ import { ParamsDeviceTracker } from '../../../types/ParamsDeviceTracker';
 import { HostItem } from '../../../types/Configuration';
 import { ChannelCode } from '../../../common/ChannelCode';
 import { Tool } from '../../client/Tool';
+import AndroidLogoPNG from '../../../public/images/logo/android.png';
 
 type Field = keyof GoogDeviceDescriptor | ((descriptor: GoogDeviceDescriptor) => string);
 type DescriptionColumn = { title: string; field: Field };
@@ -225,6 +226,7 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
             <div class="device-header device-header-android">
                 <div class="device-title-row">
                     <div class="device-name">
+                        <img class="device-platform-icon" src="${AndroidLogoPNG}" alt="" aria-hidden="true" />
                         <span>${device['ro.product.manufacturer']} ${device['ro.product.model']}</span>
                     </div>
                     <div class="device-state" title="State: ${device.state}"></div>

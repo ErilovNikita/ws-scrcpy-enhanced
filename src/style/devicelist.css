@@ -224,6 +224,14 @@ body.list #devices .device-name {
     white-space: nowrap;
 }
 
+body.list #devices .device-platform-icon {
+    flex: 0 0 auto;
+    width: 1.35em;
+    height: 1.35em;
+    object-fit: contain;
+    margin-bottom: -5px;
+}
+
 body.list #devices .device-model {
     color: var(--device-muted-color);
     font-size: 13px;
