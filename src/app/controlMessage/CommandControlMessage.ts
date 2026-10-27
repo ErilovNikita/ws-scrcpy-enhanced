@@ -68,7 +68,7 @@ export class CommandControlMessage extends ControlMessage {
         let offset = 0;
         const buffer = Buffer.alloc(1 + 1);
         offset = buffer.writeInt8(event.type, offset);
-        // scrcpy protocol expects screen power mode: OFF=0, NORMAL=2
+        // scrcpy encodes display power as a boolean: off=0, on=1.
         buffer.writeUInt8(mode ? 1 : 0, offset);
         event.buffer = buffer;
         return event;

@@ -82,6 +82,7 @@ export class StreamClientScrcpy
     private deviceName = '';
     private clientId = -1;
     private clientsCount = -1;
+    private screenOffCommandSent = false;
     private joinedStream = false;
     private touchHandler?: FeaturedInteractionHandler;
     private moreBox?: GoogMoreBox;
@@ -245,6 +246,10 @@ export class StreamClientScrcpy
         if (!this.player) {
             return;
         }
+        if (!this.screenOffCommandSent) {
+            this.sendMessage(CommandControlMessage.createSetScreenPowerModeCommand(false));
+            this.screenOffCommandSent = true;
+        }
         const STATE = BasePlayer.STATE;
         if (this.player.getState() === STATE.PAUSED) {
             this.player.play();
@@ -289,7 +294,7 @@ export class StreamClientScrcpy
     };
 
     public onDisplayInfo = (infoArray: DisplayCombinedInfo[]): void => {
-        if (!this.player) {
+        if (!this.player || !infoArray.length) {
             return;
         }
         let currentSettings = this.player.getVideoSettings();
@@ -392,6 +397,7 @@ export class StreamClientScrcpy
 
     public onDisconnected = (_ev: CloseEvent): void => {
         this.connectedHandled = false;
+        this.screenOffCommandSent = false;
         this.syncAudioConnection(false);
         this.pendingVideoPtsUs = 0;
         this.pendingVideoPacketSize = 0;
@@ -470,6 +476,7 @@ export class StreamClientScrcpy
         }
 
         this.fitToScreen = fitToScreen;
+        this.screenOffCommandSent = false;
         this.hasExplicitFitToScreen = typeof fitToScreen === 'boolean';
         this.displaySettingsInitialized = false;
         this.initialAutoFitApplied = false;

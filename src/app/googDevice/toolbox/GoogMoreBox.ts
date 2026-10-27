@@ -217,7 +217,9 @@ export class GoogMoreBox {
         const labelTextPrefix = 'Screen power';
         const screenPowerModeCheck = document.createElement('input');
         screenPowerModeCheck.type = 'checkbox';
-        let mode = (screenPowerModeCheck.checked = true) ? 'ON' : 'OFF';
+        screenPowerModeCheck.checked = false;
+        screenPowerModeCheck.dataset.persistSkipRestore = 'true';
+        let mode = 'OFF';
         screenPowerModeCheck.id = screenPowerModeLabel.htmlFor = screenPowerModeId;
         screenPowerModeLabel.innerText = `${labelTextPrefix} ${mode}`;
         const stopScreenPowerModeInterval = (): void => {

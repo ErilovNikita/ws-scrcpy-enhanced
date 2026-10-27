@@ -13,6 +13,8 @@ SCRCPY_LISTENS_ON_ALL_INTERFACES = true;
 SCRCPY_LISTENS_ON_ALL_INTERFACES = false;
 /// #endif
 
+export const SERVER_OPTIONS = ['stay_awake=true'];
+
 const ARGUMENTS = [
     SERVER_VERSION,
     SERVER_TYPE,
@@ -22,7 +24,8 @@ const ARGUMENTS = [
     'ws_audio_warmup=true',
     'audio_bit_rate=64000',
     'ws_audio_channels=1',
-    'ws_audio_frame_mode=combined'
+    'ws_audio_frame_mode=combined',
+    ...SERVER_OPTIONS,
     //'ws_reverse=true ws_reverse_url=ws://127.0.0.1:8675/device ws_reverse_token="VQG46tz8oK10yznpv0IJ2IwqK6ZSzr3LWOnxERtbz3c"'
 ];
 

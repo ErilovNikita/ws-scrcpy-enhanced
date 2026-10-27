@@ -2,7 +2,13 @@ import '../../../vendor/Genymobile/scrcpy/scrcpy-server.jar';
 import '../../../vendor/Genymobile/scrcpy/LICENSE';
 
 import { Device } from './Device';
-import { ARGS_STRING, SERVER_PACKAGE, SERVER_PROCESS_NAME, SERVER_VERSION } from '../../common/Constants';
+import {
+    ARGS_STRING,
+    SERVER_OPTIONS,
+    SERVER_PACKAGE,
+    SERVER_PROCESS_NAME,
+    SERVER_VERSION,
+} from '../../common/Constants';
 import path from 'path';
 import PushTransfer from '@dead50f7/adbkit/lib/adb/sync/pushtransfer';
 import { ServerVersion } from './ServerVersion';
@@ -71,7 +77,7 @@ export class ScrcpyServer {
         }
         const serverPid: number[] = [];
         const promises = list.map((pid) => {
-            return device.runShellCommandAdbKit(`cat /proc/${pid}/cmdline`).then((output) => {
+            return device.runShellCommandAdbKit(`cat /proc/${pid}/cmdline`).then(async (output) => {
                 const args = output.split('\0');
                 if (!args.length || args[0] !== SERVER_PROCESS_NAME) {
                     return;
@@ -86,7 +92,12 @@ export class ScrcpyServer {
                 }
                 const versionString = args[1];
                 if (versionString === SERVER_VERSION) {
-                    serverPid.push(pid);
+                    if (SERVER_OPTIONS.every((option) => args.includes(option))) {
+                        serverPid.push(pid);
+                    } else {
+                        console.log(device.TAG, `Restarting server with updated options (PID: ${pid})`);
+                        await device.killProcess(pid);
+                    }
                 } else {
                     const currentVersion = new ServerVersion(versionString);
                     if (currentVersion.isCompatible()) {
