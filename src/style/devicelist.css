@@ -100,6 +100,8 @@ body.list #devices .device-list {
 }
 
 body.list #devices .device-list > div {
+    min-width: 0;
+    overflow: hidden;
     border: 1px solid var(--device-border-color);
     border-radius: 14px;
     background: var(--device-surface-color);
@@ -998,6 +1000,7 @@ body.list #devices .device-header-list > .device-settings-row {
 }
 
 body.list #devices .device-header-list .device-settings-trigger {
+    box-sizing: border-box;
     width: 34px;
     height: 34px;
     margin: 0;
@@ -1014,10 +1017,19 @@ body.list #devices .device-header-list .device-settings-trigger:hover {
 }
 
 body.list #devices .device-header-list .device-open-hint {
-    width: 12px;
-    font-size: 25px;
-    font-weight: 400;
-    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 20px;
+    width: 20px;
+    height: 34px;
+}
+
+body.list #devices .device-header-list .device-open-hint > svg {
+    display: block;
+    width: 18px;
+    height: 18px;
+    fill: none;
 }
 
 @media (max-width: 600px) {
@@ -1050,7 +1062,9 @@ body.list #devices .device-header-list .device-open-hint {
 
     body.list #devices .device-header-list > .device-state {
         order: 1;
-        width: 100%;
+        flex: 0 1 calc(100% - 52px);
+        min-width: 0;
+        width: auto;
         margin: 7px 0 0 52px;
     }
 

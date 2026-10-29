@@ -417,7 +417,7 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
                     openHint.className = 'device-open-hint';
                     openHint.title = 'Open stream';
                     openHint.setAttribute('aria-hidden', 'true');
-                    openHint.textContent = '›';
+                    openHint.appendChild(SvgImage.create(SvgImage.Icon.CHEVRON_RIGHT));
                     header.appendChild(openHint);
                 }
                 streamLink.addEventListener('click', () => {
