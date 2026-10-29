@@ -15,6 +15,15 @@ export class GoogMoreBox {
     private static defaultSize = new Size(480, 480);
     private static savedVideoSettingsKeyPrefix = 'ws-scrcpy:saved-video-settings:v1';
     private onStop?: () => void;
+    private readonly commandStatus = document.createElement('p');
+    private clipboardSequence = 0;
+    private pendingClipboard?: {
+        sequence: number;
+        text: string;
+        paste: boolean;
+        acknowledged: boolean;
+        timer: number;
+    };
     private screenPowerModeIntervalId?: number;
     private readonly holder: HTMLElement;
     private readonly input: HTMLTextAreaElement;
@@ -86,11 +95,11 @@ export class GoogMoreBox {
             if (text) {
                 // Android key-event text injection cannot represent Cyrillic and other Unicode text.
                 const needsPaste = Array.from(text).some((character) => character.charCodeAt(0) > 0x7f);
-                client.sendMessage(
-                    needsPaste
-                        ? CommandControlMessage.createSetClipboardCommand(text, true)
-                        : new TextControlMessage(text),
-                );
+                if (needsPaste) {
+                    this.sendClipboard(text, true);
+                } else {
+                    client.sendMessage(new TextControlMessage(text));
+                }
             }
         };
 
@@ -321,12 +330,16 @@ export class GoogMoreBox {
                 btn.onclick = () => {
                     const text = input.value;
                     if (text) {
-                        client.sendMessage(CommandControlMessage.createSetClipboardCommand(text));
+                        this.sendClipboard(text, false);
                     }
                 };
             } else {
                 btn.onclick = () => {
-                    client.sendMessage(new CommandControlMessage(action));
+                    client.sendMessage(
+                        action === CommandControlMessage.TYPE_GET_CLIPBOARD
+                            ? CommandControlMessage.createGetClipboardCommand()
+                            : new CommandControlMessage(action),
+                    );
                 };
             }
         }
@@ -334,6 +347,10 @@ export class GoogMoreBox {
         inputActions.className = 'stream-input-actions';
         Array.from(inputWrapper.querySelectorAll('button')).forEach((button) => inputActions.appendChild(button));
         inputWrapper.appendChild(inputActions);
+        this.commandStatus.className = 'stream-command-status';
+        this.commandStatus.setAttribute('role', 'status');
+        this.commandStatus.hidden = true;
+        inputWrapper.appendChild(this.commandStatus);
         sendButton.classList.add('primary-action');
         const commandGrid = document.createElement('div');
         commandGrid.className = 'stream-command-grid';
@@ -537,6 +554,8 @@ export class GoogMoreBox {
             if (ev && ev instanceof Event && ev.type === 'error') {
                 console.error(TAG, ev);
             }
+            window.clearTimeout(this.pendingClipboard?.timer);
+            this.pendingClipboard = undefined;
             stopScreenPowerModeInterval();
             removeAudioStatusListener?.();
             client.setAudioEnabled(false);
@@ -670,11 +689,66 @@ export class GoogMoreBox {
         window.localStorage.setItem(key, JSON.stringify(payload));
     }
 
+    private showCommandStatus(text: string, error = false): void {
+        this.commandStatus.textContent = text;
+        this.commandStatus.hidden = false;
+        this.commandStatus.classList.toggle('error', error);
+    }
+
+    private sendClipboard(text: string, paste: boolean): void {
+        window.clearTimeout(this.pendingClipboard?.timer);
+        const sequence = ++this.clipboardSequence;
+        const timer = window.setTimeout(() => {
+            const pending = this.pendingClipboard;
+            if (!pending || pending.sequence !== sequence) {
+                return;
+            }
+            this.showCommandStatus(
+                pending.acknowledged
+                    ? 'Android received the command but did not return clipboard contents.'
+                    : 'No clipboard acknowledgement from Android. Check the deployed scrcpy server and connection.',
+                true,
+            );
+            console.warn(`${TAG} Clipboard timeout: sequence=${sequence}, acknowledged=${pending.acknowledged}`);
+            this.pendingClipboard = undefined;
+        }, 5000);
+        this.pendingClipboard = { sequence, text, paste, acknowledged: false, timer };
+        this.showCommandStatus('Waiting for Android clipboard confirmation…');
+        console.info(`${TAG} Sending clipboard command: sequence=${sequence}, characters=${text.length}, paste=${paste}`);
+        this.client.sendMessage(CommandControlMessage.createSetClipboardCommand(text, paste, sequence));
+    }
+
     public OnDeviceMessage(ev: DeviceMessage): void {
+        const pending = this.pendingClipboard;
+        if (ev.type === DeviceMessage.TYPE_ACK_CLIPBOARD) {
+            if (pending && ev.getClipboardSequence() === pending.sequence) {
+                pending.acknowledged = true;
+                this.showCommandStatus('Android received the command. Checking clipboard contents…');
+                this.client.sendMessage(CommandControlMessage.createGetClipboardCommand());
+            }
+            return;
+        }
         if (ev.type !== DeviceMessage.TYPE_CLIPBOARD) {
             return;
         }
-        this.input.value = ev.getText();
+        const text = ev.getText();
+        if (pending) {
+            if (pending.acknowledged) {
+                window.clearTimeout(pending.timer);
+                const matches = text === pending.text;
+                this.showCommandStatus(
+                    matches
+                        ? pending.paste
+                            ? 'Clipboard confirmed. Paste requested in the selected Android field.'
+                            : 'Text copied to the Android clipboard.'
+                        : 'Android received the command, but its clipboard does not contain the sent text.',
+                    !matches,
+                );
+                this.pendingClipboard = undefined;
+            }
+            return;
+        }
+        this.input.value = text;
         this.input.select();
         document.execCommand('copy');
     }

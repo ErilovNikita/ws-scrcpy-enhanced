@@ -31,4 +31,4 @@ const ARGUMENTS = [
 
 export const SERVER_PROCESS_NAME = 'app_process';
 
-export const ARGS_STRING = `/ ${SERVER_PACKAGE} ${ARGUMENTS.join(' ')} > /data/local/tmp/ws_server.log`;
+export const ARGS_STRING = `/ ${SERVER_PACKAGE} ${ARGUMENTS.join(' ')} > /data/local/tmp/ws_server.log 2>&1`;

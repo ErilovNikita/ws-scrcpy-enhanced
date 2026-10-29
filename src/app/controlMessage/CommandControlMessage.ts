@@ -45,17 +45,29 @@ export class CommandControlMessage extends ControlMessage {
         return event;
     }
 
-    public static createSetClipboardCommand(text: string, paste = false): CommandControlMessage {
+    public static createSetClipboardCommand(
+        text: string,
+        paste = false,
+        sequence = 0,
+    ): CommandControlMessage {
         const event = new CommandControlMessage(ControlMessage.TYPE_SET_CLIPBOARD);
         // The bundled server reads: type, sequence (8 bytes), UTF-8 length, text, paste.
-        // A zero sequence disables clipboard acknowledgements.
+        // Non-zero sequence IDs request an acknowledgement from the controller.
         const textLength = Buffer.byteLength(text, 'utf8');
         const buffer = Buffer.alloc(1 + 8 + 4 + textLength + 1);
         buffer.writeUInt8(event.type, 0);
+        buffer.writeUInt32BE(sequence, 5);
         buffer.writeUInt32BE(textLength, 9);
         buffer.write(text, 13, textLength, 'utf8');
         buffer.writeUInt8(paste ? 1 : 0, 13 + textLength);
         event.buffer = buffer;
+        return event;
+    }
+
+    public static createGetClipboardCommand(): CommandControlMessage {
+        const event = new CommandControlMessage(ControlMessage.TYPE_GET_CLIPBOARD);
+        // copyKey=0 reads the clipboard without injecting COPY or CUT.
+        event.buffer = Buffer.from([ControlMessage.TYPE_GET_CLIPBOARD, 0]);
         return event;
     }
 

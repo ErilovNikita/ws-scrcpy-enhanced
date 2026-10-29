@@ -2,6 +2,7 @@ import Util from '../Util';
 
 export default class DeviceMessage {
     public static TYPE_CLIPBOARD = 0;
+    public static TYPE_ACK_CLIPBOARD = 1;
     public static TYPE_PUSH_RESPONSE = 101;
 
     public static readonly MAGIC_BYTES_MESSAGE = Util.stringToUtf8ByteArray('scrcpy_message');
@@ -27,6 +28,13 @@ export default class DeviceMessage {
         offset += 4;
         const textBytes = this.buffer.slice(offset, offset + length);
         return Util.utf8ByteArrayToString(textBytes);
+    }
+
+    public getClipboardSequence(): number {
+        if (this.type !== DeviceMessage.TYPE_ACK_CLIPBOARD || this.buffer.length < 9) {
+            throw TypeError('Invalid clipboard acknowledgement');
+        }
+        return this.buffer.readUInt32BE(1) * 0x100000000 + this.buffer.readUInt32BE(5);
     }
 
     public getPushStats(): { id: number; code: number } {

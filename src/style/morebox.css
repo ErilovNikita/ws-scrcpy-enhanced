@@ -725,3 +725,19 @@ body.stream .scrcpy-settings-dialog .video-settings-panel button:disabled {
         gap: 12px;
     }
 }
+
+body.stream .scrcpy-settings-dialog .stream-command-status {
+    margin: 12px 0 0;
+    padding: 10px 12px;
+    border: 1px solid hsl(210, 90%, 86%);
+    border-radius: 7px;
+    background: hsl(210, 90%, 96%);
+    color: var(--button-text-color);
+    font-size: 12px;
+}
+
+body.stream .scrcpy-settings-dialog .stream-command-status.error {
+    border-color: hsl(342, 75%, 85%);
+    background: hsl(342, 75%, 97%);
+    color: hsl(342, 75%, 38%);
+}
