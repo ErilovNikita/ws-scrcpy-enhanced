@@ -66,7 +66,20 @@ export class GoogMoreBox {
         const sendButton = document.createElement('button');
         sendButton.innerText = 'Send as keys';
 
-        const inputWrapper = GoogMoreBox.wrap('div', [input, sendButton], body, ['stream-input-section']);
+        const inputPanel = document.createElement('details');
+        inputPanel.className = 'stream-input-panel';
+        const inputHeading = document.createElement('summary');
+        inputHeading.className = 'settings-disclosure-heading';
+        const inputCaption = document.createElement('span');
+        inputCaption.className = 'settings-disclosure-caption';
+        inputCaption.textContent = 'Send commands';
+        const inputDescription = document.createElement('small');
+        inputDescription.textContent = 'Send text and manage the device clipboard';
+        inputCaption.appendChild(inputDescription);
+        inputHeading.append(GoogMoreBox.createActionIcon('Commands'), inputCaption);
+        inputPanel.appendChild(inputHeading);
+        body.appendChild(inputPanel);
+        const inputWrapper = GoogMoreBox.wrap('div', [input, sendButton], inputPanel, ['stream-input-section']);
         sendButton.onclick = () => {
             if (input.value) {
                 client.sendMessage(new TextControlMessage(input.value));
@@ -224,7 +237,7 @@ export class GoogMoreBox {
         commands.filter((command) => command instanceof HTMLButtonElement).forEach((button) => {
             commandGrid.appendChild(button);
         });
-        body.appendChild(commandGrid);
+        body.prepend(commandGrid);
         commands.filter((command) => command.classList.contains('spoiler')).forEach((spoiler) => {
             const description = document.createElement('small');
             description.textContent = 'Quick display and stream options';
@@ -241,7 +254,6 @@ export class GoogMoreBox {
         });
 
         const audioPanel = document.createElement('details');
-        audioPanel.open = true;
         audioPanel.className = 'stream-audio-panel';
         const audioHeading = document.createElement('summary');
         audioHeading.className = 'stream-audio-heading settings-disclosure-heading';
@@ -571,6 +583,7 @@ export class GoogMoreBox {
             'Rotate device': 'M4 9V3m0 0h6M4 3l4 4m12 8v6m0 0h-6m6 0-4-4M9 4h8v16H7V9',
             'Apply audio settings': 'm4 12 5 5L20 6',
             'Disconnect': 'M6 10h12v11H6zM8 10V6a4 4 0 0 1 8 0v4',
+            Commands: 'M3 6h18v12H3zM6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M7 15h10',
             Video: 'M3 6h12v12H3zM15 10l6-4v12l-6-4',
             Audio: 'M4 9h4l5-5v16l-5-5H4zM16 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14',
         };

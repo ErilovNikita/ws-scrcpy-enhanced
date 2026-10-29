@@ -293,7 +293,7 @@ body.stream .scrcpy-settings-dialog .stream-command-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 8px;
-    margin: 16px 0 12px;
+    margin: 0 0 12px;
 }
 
 body.stream .scrcpy-settings-dialog .stream-command-grid button {
@@ -301,6 +301,7 @@ body.stream .scrcpy-settings-dialog .stream-command-grid button {
     padding: 8px;
 }
 
+body.stream .scrcpy-settings-dialog .stream-input-panel,
 body.stream .scrcpy-settings-dialog .spoiler,
 body.stream .scrcpy-settings-dialog .stream-audio-panel {
     margin-top: 12px;
@@ -561,4 +562,9 @@ body.stream .scrcpy-settings-dialog details:not([open]) > :not(summary) {
 body.stream .scrcpy-settings-dialog .settings-disclosure-heading h3 {
     font-size: inherit;
     font-weight: inherit;
+}
+
+body.stream .scrcpy-settings-dialog .stream-input-panel > .stream-input-section {
+    padding: 14px 16px;
+    border-top: 1px solid hsl(216, 20%, 88%);
 }
