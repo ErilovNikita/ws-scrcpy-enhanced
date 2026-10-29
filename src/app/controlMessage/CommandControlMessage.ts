@@ -47,18 +47,14 @@ export class CommandControlMessage extends ControlMessage {
 
     public static createSetClipboardCommand(text: string, paste = false): CommandControlMessage {
         const event = new CommandControlMessage(ControlMessage.TYPE_SET_CLIPBOARD);
-        const textBytes: Uint8Array | null = text ? Util.stringToUtf8ByteArray(text) : null;
-        const textLength = textBytes ? textBytes.length : 0;
-        let offset = 0;
-        const buffer = Buffer.alloc(1 + 1 + 4 + textLength);
-        offset = buffer.writeInt8(event.type, offset);
-        offset = buffer.writeInt8(paste ? 1 : 0, offset);
-        offset = buffer.writeInt32BE(textLength, offset);
-        if (textBytes) {
-            textBytes.forEach((byte: number, index: number) => {
-                buffer.writeUInt8(byte, index + offset);
-            });
-        }
+        // The bundled server reads: type, sequence (8 bytes), UTF-8 length, text, paste.
+        // A zero sequence disables clipboard acknowledgements.
+        const textLength = Buffer.byteLength(text, 'utf8');
+        const buffer = Buffer.alloc(1 + 8 + 4 + textLength + 1);
+        buffer.writeUInt8(event.type, 0);
+        buffer.writeUInt32BE(textLength, 9);
+        buffer.write(text, 13, textLength, 'utf8');
+        buffer.writeUInt8(paste ? 1 : 0, 13 + textLength);
         event.buffer = buffer;
         return event;
     }
