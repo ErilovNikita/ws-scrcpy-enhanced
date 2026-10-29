@@ -82,8 +82,15 @@ export class GoogMoreBox {
         body.appendChild(inputPanel);
         const inputWrapper = GoogMoreBox.wrap('div', [input, sendButton], inputPanel, ['stream-input-section']);
         sendButton.onclick = () => {
-            if (input.value) {
-                client.sendMessage(new TextControlMessage(input.value));
+            const text = input.value;
+            if (text) {
+                // Android key-event text injection cannot represent Cyrillic and other Unicode text.
+                const needsPaste = Array.from(text).some((character) => character.charCodeAt(0) > 0x7f);
+                client.sendMessage(
+                    needsPaste
+                        ? CommandControlMessage.createSetClipboardCommand(text, true)
+                        : new TextControlMessage(text),
+                );
             }
         };
 
