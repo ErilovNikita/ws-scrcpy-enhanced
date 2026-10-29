@@ -148,9 +148,7 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
                 this.params,
             );
             item.appendChild(link);
-            const separator = document.createElement('span');
-            separator.innerText = ' / ';
-            item.appendChild(separator);
+            item.classList.add('device-player-card');
             const webrtcLink = DeviceTracker.buildLink(
                 {
                     action: webrtcAction,
@@ -206,7 +204,7 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
         const optionElement = document.createElement('option');
         optionElement.setAttribute(Attribute.URL, url);
         optionElement.setAttribute(Attribute.NAME, name);
-        optionElement.innerText = `proxy over adb`;
+        optionElement.innerText = 'Proxy over ADB';
         return optionElement;
     }
 
@@ -274,6 +272,10 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
                 value = item.field(device);
             }
             const td = document.createElement('div');
+            const label = document.createElement('span');
+            label.className = 'device-setting-label';
+            label.innerText = fieldName === 'interfaces' ? 'Connection method' : 'Server PID';
+            td.appendChild(label);
             td.classList.add(DeviceTracker.titleToClassName(title), blockClass);
             services.appendChild(td);
             if (fieldName === 'pid') {
@@ -347,7 +349,7 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
                 /// #else
                 selectedInterfaceUrl = proxyInterfaceUrl;
                 selectedInterfaceName = proxyInterfaceName;
-                td.classList.add('hidden');
+                // Keep the proxy selector visible even when direct connections are disabled.
                 /// #endif
                 if (isActive) {
                     const adbProxyOption = DeviceTracker.createInterfaceOption(proxyInterfaceName, proxyInterfaceUrl);

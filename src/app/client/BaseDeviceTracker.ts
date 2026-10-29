@@ -196,12 +196,51 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
         const closeButton = document.createElement('button');
         closeButton.className = 'device-settings-close';
         closeButton.type = 'button';
-        closeButton.innerText = 'Close';
+        closeButton.innerText = '×';
         closeButton.setAttribute('aria-label', `Close settings for ${deviceName}`);
 
         const content = document.createElement('div');
         content.className = 'device-settings-content';
-        content.appendChild(services);
+        const heading = document.createElement('div');
+        heading.className = 'device-settings-heading';
+        const metadata = document.createElement('div');
+        metadata.className = 'device-settings-metadata';
+        const status = document.createElement('span');
+        const online = !!row.querySelector('.device.active');
+        status.className = `device-settings-status ${online ? 'online' : 'offline'}`;
+        status.innerText = online ? 'Online' : 'Offline';
+        metadata.appendChild(status);
+        const version = row.querySelector('.release-version')?.textContent;
+        if (version) {
+            const detail = document.createElement('span');
+            detail.textContent = version.trim();
+            metadata.appendChild(detail);
+        }
+        heading.append(title, metadata);
+
+        const actions = document.createElement('div');
+        actions.className = 'device-settings-actions';
+        Array.from(services.children).forEach((entry) => {
+            if (entry.querySelector('a') && !entry.hasAttribute(BaseDeviceTracker.AttributePlayerCodeName)) {
+                const labels: Record<string, string> = {
+                    'link-shell': 'Shell',
+                    'link-devtools': 'DevTools',
+                    'link-list-files': 'List files',
+                };
+                const link = entry.querySelector('a');
+                const label = link?.querySelector('span');
+                if (link && label) {
+                    const name = Object.keys(labels).find((key) => link.classList.contains(key));
+                    if (name) {
+                        label.textContent = labels[name];
+                    }
+                }
+                actions.appendChild(entry);
+            } else if (entry.classList.contains('stream')) {
+                actions.appendChild(entry);
+            }
+        });
+        content.append(actions, services);
 
         const close = (): void => {
             overlay.hidden = true;
@@ -245,7 +284,7 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
             }
         });
 
-        dialogHeader.append(title, closeButton);
+        dialogHeader.append(heading, closeButton);
         dialog.append(dialogHeader, content);
         overlay.appendChild(dialog);
         settingsRow.appendChild(trigger);

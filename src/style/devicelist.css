@@ -627,3 +627,253 @@ body.list #devices .device-settings-content .desc-block > button:disabled {
     }
 
 }
+
+/* Device settings: action bar followed by connection and player cards. */
+body.list #devices .device-settings-overlay {
+    box-sizing: border-box;
+    background: hsla(218, 24%, 20%, .5);
+    backdrop-filter: blur(6px);
+}
+
+body.list #devices .device-settings-dialog {
+    width: min(1080px, 100%);
+    max-height: 100%;
+    border-radius: 22px;
+    box-shadow: 0 28px 80px hsla(218, 30%, 15%, .28);
+}
+
+body.list #devices .device-settings-header {
+    align-items: flex-start;
+    padding: 32px;
+}
+
+body.list #devices .device-settings-heading {
+    min-width: 0;
+}
+
+body.list #devices .device-settings-title {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -.025em;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+body.list #devices .device-settings-metadata {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 18px;
+    margin-top: 14px;
+    color: var(--device-muted-color);
+    font-size: 17px;
+}
+
+body.list #devices .device-settings-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 14px;
+    border-radius: 16px;
+    background: #f0f2f6;
+}
+
+body.list #devices .device-settings-status::before {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: currentColor;
+    content: '';
+}
+
+body.list #devices .device-settings-status.online {
+    color: #00965e;
+    background: #dcf9e9;
+}
+
+body.list #devices .device-settings-close {
+    display: grid;
+    place-items: center;
+    width: 46px;
+    height: 46px;
+    padding: 0;
+    border-radius: 10px;
+    background: #f5f6f9;
+    font-size: 30px;
+    line-height: 1;
+}
+
+body.list #devices .device-settings-content {
+    padding: 24px 32px 32px;
+}
+
+body.list #devices .device-settings-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--device-border-color);
+}
+
+body.list #devices .device-settings-actions .desc-block > a,
+body.list #devices .device-settings-actions .desc-block > button {
+    min-height: 56px;
+    gap: 16px;
+    padding: 0 22px;
+    border-color: transparent;
+    border-radius: 12px;
+    font-size: 17px;
+    font-weight: 650;
+}
+
+body.list #devices .device-settings-actions .desc-block > .link-shell {
+    background: #2476ff;
+    color: white;
+}
+
+body.list #devices .device-settings-actions .desc-block > a > svg,
+body.list #devices .device-settings-actions .desc-block > button > svg {
+    width: 25px;
+    height: 25px;
+}
+
+body.list #devices .device-settings-content .services {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+
+body.list #devices .device-settings-content .services > .desc-block {
+    box-sizing: border-box;
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-content: center;
+    justify-content: flex-start;
+    gap: 10px;
+    min-width: 0;
+    min-height: 124px;
+    padding: 18px;
+    border: 1px solid #e2e7f0;
+    border-radius: 12px;
+    background: #fcfdff;
+}
+
+body.list #devices .device-setting-label {
+    width: 100%;
+    font-size: 15px;
+    font-weight: 500;
+}
+
+body.list #devices .device-settings-content .services select {
+    flex: 1;
+    min-width: 0;
+    max-width: 100%;
+    font-size: 16px;
+}
+
+body.list #devices .device-settings-content .services .action-button {
+    padding: 10px;
+    border-radius: 10px;
+    background: #e8f1ff;
+    color: #2476ff;
+}
+
+body.list #devices .device-settings-content .device-player-card > a:first-child {
+    justify-content: flex-start;
+    width: 100%;
+    padding: 0 20px 0 0;
+    border: 0;
+    background: transparent;
+    font-size: 18px;
+    font-weight: 650;
+}
+
+body.list #devices .device-settings-content .device-player-card > a:first-child::after {
+    position: absolute;
+    right: 18px;
+    content: '›';
+    font-size: 28px;
+    font-weight: 400;
+}
+
+body.list #devices .device-settings-content .device-player-card > a:first-child > svg {
+    box-sizing: content-box;
+    width: 26px;
+    height: 26px;
+    padding: 12px;
+    border-radius: 12px;
+    background: #e6efff;
+    color: #2476ff;
+}
+
+body.list #devices .device-settings-content .device-player-card:nth-child(4n) > a:first-child > svg {
+    background: #fce7ef;
+    color: #ed2875;
+}
+
+body.list #devices .device-settings-content .device-player-card:nth-child(4n + 1) > a:first-child > svg {
+    background: #e3f6f3;
+    color: #00a58e;
+}
+
+body.list #devices .device-settings-content .device-player-card:nth-child(4n + 2) > a:first-child > svg {
+    background: #eee5ff;
+    color: #8034db;
+}
+
+body.list #devices .device-settings-content .device-player-card > a.link-stream-webrtc {
+    min-height: 30px;
+    margin-left: 59px;
+    padding: 5px 12px;
+    border: 0;
+    border-radius: 14px;
+    background: #e6efff;
+    color: #2476ff;
+    font-size: 14px;
+}
+
+body.list #devices .device-player-card > a.link-stream-webrtc > svg {
+    display: none;
+}
+
+body.list #devices .device-settings-dialog a:focus-visible,
+body.list #devices .device-settings-dialog button:focus-visible,
+body.list #devices .device-settings-dialog select:focus-visible {
+    outline: 2px solid #2476ff;
+    outline-offset: 3px;
+}
+
+@media (max-width: 900px) {
+    body.list #devices .device-settings-content .services {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 600px) {
+    body.list #devices .device-settings-header,
+    body.list #devices .device-settings-content {
+        padding: 20px 16px;
+    }
+
+    body.list #devices .device-settings-title {
+        font-size: 23px;
+    }
+
+    body.list #devices .device-settings-content .services {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    body.list #devices .device-settings-actions {
+        gap: 6px;
+    }
+
+    body.list #devices .device-settings-actions .desc-block > a,
+    body.list #devices .device-settings-actions .desc-block > button {
+        min-height: 46px;
+        padding: 0 12px;
+        gap: 10px;
+        font-size: 14px;
+    }
+}
