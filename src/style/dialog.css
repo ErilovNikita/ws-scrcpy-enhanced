@@ -505,3 +505,216 @@ body.list .dialog-body.configureDialog [hidden] {
         padding: 7px 8px;
     }
 }
+
+/* Stream configuration uses the same compact typography as the device list. */
+body.list .dialog-container.configureDialog {
+    width: min(880px, 100%);
+    max-width: 880px;
+    font-family: inherit;
+    font-size: var(--font-size);
+    line-height: 1.4;
+}
+
+body.list .configure-heading {
+    flex: 1;
+    min-width: 0;
+}
+
+body.list .dialog-header.configureDialog span.dialog-title {
+    display: block;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+body.list .configure-metadata {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 5px;
+    font-size: 12px;
+    color: var(--device-muted-color);
+}
+
+body.list .configure-metadata > span {
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: var(--device-page-color);
+}
+
+body.list .configure-metadata > .online {
+    background: var(--device-status-bg-color);
+    color: var(--device-status-color);
+}
+
+body.list .configure-metadata > .online::before {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-right: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    content: '';
+}
+
+body.list .dialog-header.configureDialog .configure-close {
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    margin-left: 16px;
+    padding: 0;
+    border: 1px solid var(--device-border-color);
+    border-radius: 7px;
+    background: var(--device-surface-color);
+    color: var(--text-color);
+    font: inherit;
+    font-size: 22px;
+    cursor: pointer;
+}
+
+body.list .stream-settings-intro {
+    margin-bottom: 12px;
+}
+
+body.list .stream-settings-intro h2 {
+    margin: 0 0 3px;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+body.list .stream-settings-intro p {
+    margin: 0;
+    color: var(--device-muted-color);
+    font-size: 13px;
+}
+
+body.list .stream-settings-table {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow: hidden;
+    border: 1px solid var(--device-border-color);
+    border-radius: 8px;
+}
+
+body.list .stream-settings-table .stream-setting-row {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+    align-items: center;
+    gap: 16px;
+    min-width: 0;
+    min-height: 58px;
+    box-sizing: border-box;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--device-border-color);
+    background: var(--device-surface-color);
+}
+
+body.list .stream-setting-row:last-child {
+    border-bottom: 0;
+}
+
+body.list .stream-setting-caption {
+    min-width: 0;
+}
+
+body.list .stream-setting-row small {
+    display: block;
+    margin-top: 3px;
+    color: var(--device-muted-color);
+    font-size: 12px;
+    font-weight: 400;
+}
+
+body.list .stream-setting-field {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+body.list .stream-setting-field > .input {
+    flex: 1;
+    box-sizing: border-box;
+    min-width: 0;
+    min-height: 34px;
+}
+
+body.list .stream-setting-field > .range-value {
+    flex: 0 0 100px;
+    width: 100px;
+}
+
+body.list .stream-setting-row.setting-maxWidth,
+body.list .stream-setting-row.setting-maxHeight {
+    grid-column: auto;
+    grid-template-columns: minmax(0, 1fr) 90px;
+}
+
+body.list .stream-setting-row.setting-maxWidth {
+    border-right: 1px solid var(--device-border-color);
+}
+
+body.list .dialog-body.configureDialog .stream-setting-row.fit-to-screen-row {
+    grid-template-columns: minmax(0, 1fr) 42px;
+}
+
+body.list .dialog-footer.configureDialog .settings-action-button:first-child {
+    margin-right: auto;
+}
+
+body.list .dialog-footer.configureDialog .settings-save-button {
+    border-color: var(--device-accent-color);
+    background: var(--device-accent-color);
+    color: white;
+}
+
+body.list .dialog-footer.configureDialog .settings-save-button:hover {
+    background: var(--link-color);
+    color: white;
+}
+
+body.list .dialog-container.configureDialog button:focus-visible,
+body.list .dialog-container.configureDialog select:focus-visible,
+body.list .dialog-container.configureDialog input:focus-visible {
+    outline: 2px solid var(--device-accent-color);
+    outline-offset: 2px;
+}
+
+@media (max-width: 600px) {
+    body.list .dialog-header.configureDialog {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    body.list .dialog-header.configureDialog .control-button {
+        margin-right: 0;
+    }
+
+    body.list .dialog-header.configureDialog .configure-close {
+        margin-left: 0;
+    }
+
+    body.list .stream-settings-table .stream-setting-row {
+        grid-column: 1 / -1;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 8px;
+        padding: 10px 12px;
+        border-right: 0;
+    }
+
+    body.list .dialog-footer.configureDialog .settings-action-button:first-child {
+        margin-right: 0;
+    }
+}
+
+body.list .stream-setting-field .range-unit {
+    color: var(--device-muted-color);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+body.list .stream-setting-field > .input:disabled {
+    background: var(--device-page-color);
+    color: var(--device-muted-color);
+    cursor: not-allowed;
+}

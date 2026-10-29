@@ -51,12 +51,16 @@ export class ConfigureScrcpy extends BaseClient<ParamsStreamScrcpy, ConfigureScr
     private statusText = '';
     private connectionCount = 0;
 
-    constructor(private readonly tracker: DeviceTracker, descriptor: GoogDeviceDescriptor, params: ParamsStreamScrcpy) {
+    constructor(
+        private readonly tracker: DeviceTracker,
+        private readonly descriptor: GoogDeviceDescriptor,
+        params: ParamsStreamScrcpy,
+    ) {
         super(params);
         this.udid = descriptor.udid;
         this.escapedUdid = Util.escapeUdid(this.udid);
         this.playerStorageKey = `configure_stream::${this.escapedUdid}::player`;
-        this.deviceName = descriptor['ro.product.model'];
+        this.deviceName = `${descriptor['ro.product.manufacturer']} ${descriptor['ro.product.model']}`.trim();
         this.TAG = `ConfigureScrcpy[${this.udid}]`;
         this.createStreamReceiver(params);
         this.setTitle(`${this.deviceName}. Configure stream`);
@@ -274,14 +278,14 @@ export class ConfigureScrcpy extends BaseClient<ParamsStreamScrcpy, ConfigureScr
             return;
         }
         heightInput.disabled = widthInput.disabled = checked;
-        heightInput.hidden = widthInput.hidden = checked;
+        heightInput.hidden = widthInput.hidden = false;
         const heightLabel = document.getElementById(`label_maxHeight_${this.escapedUdid}`);
         const widthLabel = document.getElementById(`label_maxWidth_${this.escapedUdid}`);
         if (heightLabel) {
-            heightLabel.hidden = checked;
+            heightLabel.hidden = false;
         }
         if (widthLabel) {
-            widthLabel.hidden = checked;
+            widthLabel.hidden = false;
         }
         if (checked) {
             if (heightInput.value) {
@@ -437,6 +441,9 @@ export class ConfigureScrcpy extends BaseClient<ParamsStreamScrcpy, ConfigureScr
         background.classList.add('dialog-background', dialogName);
         const dialogContainer = (this.dialogContainer = document.createElement('div'));
         dialogContainer.classList.add('dialog-container', dialogName);
+        dialogContainer.setAttribute('role', 'dialog');
+        dialogContainer.setAttribute('aria-modal', 'true');
+        dialogContainer.setAttribute('aria-labelledby', `configure_title_${this.escapedUdid}`);
         const dialogHeader = document.createElement('div');
         dialogHeader.classList.add('dialog-header', dialogName, 'control-wrapper');
         const backButton = new ToolBoxButton('Back', SvgImage.Icon.ARROW_BACK);
@@ -451,7 +458,25 @@ export class ConfigureScrcpy extends BaseClient<ParamsStreamScrcpy, ConfigureScr
         const deviceName = document.createElement('span');
         deviceName.classList.add('dialog-title', 'main-title');
         deviceName.innerText = this.deviceName;
-        dialogHeader.appendChild(deviceName);
+        deviceName.id = `configure_title_${this.escapedUdid}`;
+        const heading = document.createElement('div');
+        heading.className = 'configure-heading';
+        const metadata = document.createElement('div');
+        metadata.className = 'configure-metadata';
+        [
+            `Android ${this.descriptor['ro.build.version.release']}`,
+            `SDK ${this.descriptor['ro.build.version.sdk']}`,
+            this.descriptor.state === 'device' ? 'Online' : 'Offline',
+        ].forEach((text, index) => {
+            const badge = document.createElement('span');
+            badge.textContent = text;
+            if (index === 2 && this.descriptor.state === 'device') {
+                badge.className = 'online';
+            }
+            metadata.appendChild(badge);
+        });
+        heading.append(deviceName, metadata);
+        dialogHeader.appendChild(heading);
         const statusElement = document.createElement('span');
         statusElement.classList.add('configure-status');
         this.connectionStatusElement = statusElement;
@@ -470,6 +495,13 @@ export class ConfigureScrcpy extends BaseClient<ParamsStreamScrcpy, ConfigureScr
         okButton.addEventListener('click', this.openStream);
         okButton.classList.add('settings-action-button');
         dialogHeader.appendChild(okButton);
+        const closeButton = document.createElement('button');
+        closeButton.className = 'configure-close';
+        closeButton.type = 'button';
+        closeButton.textContent = '×';
+        closeButton.setAttribute('aria-label', 'Close stream settings');
+        closeButton.addEventListener('click', this.cancel);
+        dialogHeader.appendChild(closeButton);
 
         const dialogBody = (this.dialogBody = document.createElement('div'));
         dialogBody.classList.add('dialog-body', blockClass, dialogName, 'hidden');
@@ -564,7 +596,96 @@ export class ConfigureScrcpy extends BaseClient<ParamsStreamScrcpy, ConfigureScr
         this.encoderSelectElement.classList.add('input');
         this.encoderSelectElement.id = encoderLabel.htmlFor = `encoderName_${this.escapedUdid}`;
 
-        dialogBody.appendChild(controls);
+        // Group the existing inputs without changing their IDs or event handlers.
+        const descriptions: Record<string, string> = {
+            player: 'Video player for decoding and rendering',
+            displayId: 'Select display and resolution',
+            bitrate: 'Target video bitrate for the stream',
+            maxFps: 'Maximum frames per second',
+            iFrameInterval: 'Interval between key frames',
+            maxWidth: 'Maximum video width in pixels',
+            maxHeight: 'Maximum video height in pixels',
+            codecOptions: 'Advanced video codec options',
+            encoderName: 'Video encoder to use',
+        };
+        const settingsTable = document.createElement('div');
+        settingsTable.className = 'stream-settings-table';
+        [playerWrapper, controls].forEach((group) => {
+            Array.from(group.children).forEach((element) => {
+                if (element.classList.contains('fit-to-screen-row')) {
+                    element.classList.add('stream-setting-row');
+                    const description = document.createElement('small');
+                    description.textContent = 'Scale video to fit the window size';
+                    element.querySelector('.label')?.appendChild(description);
+                    settingsTable.appendChild(element);
+                    return;
+                }
+                if (!(element instanceof HTMLLabelElement)) {
+                    return;
+                }
+                const input = group.querySelector<HTMLInputElement | HTMLSelectElement>(
+                    `[id="${element.htmlFor}"]`,
+                );
+                if (!input) {
+                    return;
+                }
+                const key = input.id.slice(0, -(this.escapedUdid.length + 1));
+                const row = document.createElement('div');
+                row.className = `stream-setting-row setting-${key}`;
+                const caption = document.createElement('div');
+                caption.className = 'stream-setting-caption';
+                const description = document.createElement('small');
+                description.textContent = descriptions[key] || '';
+                caption.append(element, description);
+                const field = document.createElement('div');
+                field.className = 'stream-setting-field';
+                field.appendChild(input);
+                if (input instanceof HTMLInputElement && input.type === 'range') {
+                    const value = document.createElement('input');
+                    value.type = 'number';
+                    value.className = 'input range-value';
+                    const scale = key === 'bitrate' ? 1024 * 1024 : 1;
+                    value.min = (Number(input.min) / scale).toString();
+                    value.max = (Number(input.max) / scale).toString();
+                    value.step = (Number(input.step) / scale).toString();
+                    value.value = (Number(input.value) / scale).toString();
+                    value.setAttribute('aria-label', key === 'bitrate' ? 'Bitrate in Mib per second' : 'Max FPS');
+                    input.addEventListener('input', () => {
+                        value.value = (Number(input.value) / scale).toString();
+                    });
+                    value.addEventListener('change', () => {
+                        if (value.value && value.checkValidity()) {
+                            input.value = (Number(value.value) * scale).toString();
+                            input.dispatchEvent(new Event('input'));
+                        } else {
+                            value.value = (Number(input.value) / scale).toString();
+                        }
+                    });
+                    field.appendChild(value);
+                    if (key === 'bitrate') {
+                        const unit = document.createElement('span');
+                        unit.className = 'range-unit';
+                        unit.textContent = 'Mib/s';
+                        field.appendChild(unit);
+                    }
+                } else if (input instanceof HTMLInputElement && key !== 'codecOptions') {
+                    input.type = 'number';
+                    input.min = '0';
+                    input.step = '1';
+                }
+                row.append(caption, field);
+                settingsTable.appendChild(row);
+            });
+        });
+        playerWrapper.remove();
+        const intro = document.createElement('div');
+        intro.className = 'stream-settings-intro';
+        const title = document.createElement('h2');
+        title.textContent = 'Stream settings';
+        const subtitle = document.createElement('p');
+        subtitle.textContent = 'Configure video stream parameters for this device';
+        intro.append(title, subtitle);
+        dialogBody.append(intro, settingsTable);
 
         const buttonsWrapper = document.createElement('div');
         buttonsWrapper.classList.add('settings-footer-actions');
@@ -588,7 +709,7 @@ export class ConfigureScrcpy extends BaseClient<ParamsStreamScrcpy, ConfigureScr
         buttonsWrapper.appendChild(loadSettingsButton);
 
         const saveSettingsButton = (this.saveSettingsButton = document.createElement('button'));
-        saveSettingsButton.classList.add('settings-action-button');
+        saveSettingsButton.classList.add('settings-action-button', 'settings-save-button');
         saveSettingsButton.appendChild(SvgImage.create(SvgImage.Icon.UPLOAD));
         const saveLabel = document.createElement('span');
         saveLabel.innerText = 'Save settings';
