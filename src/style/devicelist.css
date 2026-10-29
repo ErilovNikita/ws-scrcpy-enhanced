@@ -36,15 +36,19 @@ body.list {
 
 body.list #devices {
     box-sizing: border-box;
-    width: min(1200px, calc(100% - 64px));
+    width: min(960px, calc(100% - 64px));
     height: auto;
     min-height: 100vh;
     margin: 0 auto;
     padding: 48px 0 64px;
     overflow: visible;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
 }
 
 body.list #devices::before {
+    order: -2;
     display: block;
     margin-bottom: 6px;
     color: var(--text-color);
@@ -56,6 +60,7 @@ body.list #devices::before {
 }
 
 body.list #devices::after {
+    order: -1;
     display: block;
     margin-bottom: 30px;
     color: var(--device-muted-color);
@@ -85,50 +90,49 @@ body.list #device_list_menu {
 }
 
 body.list #devices .device-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
-    gap: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
     width: 100%;
     margin: 0;
-    border: 0;
-    border-spacing: 0;
-    border-collapse: separate;
     font-family: inherit;
     font-size: var(--font-size);
 }
 
 body.list #devices .device-list > div {
-    display: contents;
+    border: 1px solid var(--device-border-color);
+    border-radius: 14px;
+    background: var(--device-surface-color);
+    box-shadow: 0 2px 8px hsla(220, 30%, 20%, .025);
 }
 
 body.list #devices .tracker-name {
-    grid-column: 1 / -1;
-    margin: 8px 0 0;
-    padding: 0 0 10px;
+    margin: 0;
+    padding: 12px 20px;
     border-bottom: 1px solid var(--device-border-color);
     color: var(--device-muted-color);
-    font-size: 12px;
-    font-weight: 650;
-    letter-spacing: .07em;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .06em;
     text-transform: uppercase;
+    overflow-wrap: anywhere;
 }
 
 body.list #devices .device-list .device {
     box-sizing: border-box;
     position: relative;
     min-width: 0;
-    padding: 18px;
-    border: 1px solid var(--device-border-color);
-    border-radius: 12px;
-    background: var(--device-surface-color);
-    box-shadow: 0 2px 6px hsla(220, 30%, 20%, .045), 0 10px 24px hsla(220, 30%, 20%, .035);
-    transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+    padding: 18px 20px;
+    border-top: 1px solid var(--device-border-color);
+    transition: background-color .15s ease;
+}
+
+body.list #devices .tracker-name + .device {
+    border-top: 0;
 }
 
 body.list #devices .device-list .device:hover {
-    border-color: color-mix(in srgb, var(--device-accent-color) 45%, var(--device-border-color));
-    background: var(--device-surface-color);
-    box-shadow: 0 4px 12px hsla(220, 30%, 20%, .07), 0 14px 30px hsla(220, 30%, 20%, .06);
+    background: var(--device-list-hover-color);
 }
 
 body.list #devices .device-list .device.stream-launchable {
@@ -922,4 +926,135 @@ body.list #devices .device-setting-label > svg {
     height: 20px;
     fill: none;
     color: var(--device-accent-color);
+}
+
+/* Compact native-style device rows. Modal contents keep their own layout. */
+body.list #devices .device-header.device-header-list {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 16px;
+    min-height: 48px;
+}
+
+body.list #devices .device-header-list > .device-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: #edf8f1;
+}
+
+body.list #devices .device-avatar .device-platform-icon {
+    width: 28px;
+    height: 28px;
+    margin: 0;
+    object-fit: contain;
+}
+
+body.list #devices .device-header-list > .device-avatar-ios {
+    background: #edf1f7;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+body.list #devices .device-header-list > .device-details {
+    display: block;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+body.list #devices .device-details .device-name {
+    display: block;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+body.list #devices .device-details .device-version-tags {
+    gap: 6px;
+    margin-top: 4px;
+    color: var(--device-muted-color);
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+body.list #devices .device-details .device-model {
+    font-size: inherit;
+}
+
+body.list #devices .device-header-list > .device-state {
+    margin-left: 8px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+body.list #devices .device-header-list > .device-settings-row {
+    display: flex;
+    flex: 0 0 auto;
+}
+
+body.list #devices .device-header-list .device-settings-trigger {
+    width: 34px;
+    height: 34px;
+    margin: 0;
+    padding: 8px;
+    border-color: transparent;
+    background: transparent;
+    color: var(--device-muted-color);
+}
+
+body.list #devices .device-header-list .device-settings-trigger:hover {
+    border-color: var(--device-border-color);
+    background: var(--device-surface-color);
+    color: var(--device-accent-color);
+}
+
+body.list #devices .device-header-list .device-open-hint {
+    width: 12px;
+    font-size: 25px;
+    font-weight: 400;
+    line-height: 1;
+}
+
+@media (max-width: 600px) {
+    body.list #devices {
+        padding-top: 28px;
+    }
+
+    body.list #devices .tracker-name {
+        padding: 12px 14px;
+    }
+
+    body.list #devices .device-list .device {
+        padding: 14px;
+    }
+
+    body.list #devices .device-header.device-header-list {
+        flex-wrap: wrap;
+        gap: 0 12px;
+    }
+
+    body.list #devices .device-header-list > .device-avatar {
+        flex-basis: 40px;
+        height: 40px;
+        border-radius: 10px;
+    }
+
+    body.list #devices .device-header-list > .device-details {
+        flex-basis: calc(100% - 98px);
+    }
+
+    body.list #devices .device-header-list > .device-state {
+        order: 1;
+        width: 100%;
+        margin: 7px 0 0 52px;
+    }
+
+    body.list #devices .device-header-list > .device-open-hint {
+        display: none;
+    }
 }

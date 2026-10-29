@@ -43,14 +43,19 @@ export class DeviceTracker extends BaseDeviceTracker<ApplDeviceDescriptor, never
         const isActive = device.state === DeviceState.CONNECTED;
         const servicesId = `device_services_${fullName}`;
         const row = html`<div class="device ${isActive ? 'active' : 'not-active'}">
-            <div class="device-header">
-                <div class="device-name">${device.name}</div>
-                <div class="device-model">${device.model}</div>
-                <div class="device-serial">${device.udid}</div>
-                <div class="device-version">
-                    <div class="release-version">${device.version}</div>
+            <div class="device-header device-header-list">
+                <div class="device-avatar device-avatar-ios" aria-hidden="true">iOS</div>
+                <div class="device-details">
+                    <div class="device-name">${device.name}</div>
+                    <div class="device-version-tags">
+                        <span class="release-version">iOS ${device.version}</span>
+                        <span class="device-metadata-separator" aria-hidden="true">·</span>
+                        <span class="device-model">${device.model}</span>
+                    </div>
+                    <div class="device-serial">${device.udid}</div>
                 </div>
                 <div class="device-state" title="State: ${device.state}"></div>
+                <div class="device-settings-row"></div>
             </div>
             <div id="${servicesId}" class="services"></div>
         </div>`.content;

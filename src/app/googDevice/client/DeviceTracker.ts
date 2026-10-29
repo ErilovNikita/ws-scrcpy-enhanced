@@ -221,22 +221,19 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
         let hasPid = false;
         const servicesId = `device_services_${fullName}`;
         const row = html`<div class="device ${isActive ? 'active' : 'not-active'}">
-            <div class="device-header device-header-android">
-                <div class="device-title-row">
-                    <div class="device-name">
-                        <img class="device-platform-icon" src="${AndroidLogoPNG}" alt="" aria-hidden="true" />
-                        <span>${device['ro.product.manufacturer']} ${device['ro.product.model']}</span>
-                    </div>
-                    <div class="device-state" title="State: ${device.state}"></div>
+            <div class="device-header device-header-list">
+                <div class="device-avatar device-avatar-android" aria-hidden="true">
+                    <img class="device-platform-icon" src="${AndroidLogoPNG}" alt="" />
                 </div>
-                <div class="device-version-tags">
-                    <div class="device-version">
-                        <div class="release-version">Android ${device['ro.build.version.release']}</div>
-                    </div>
-                    <div class="device-version">
-                        <div class="sdk-version">SDK ${device['ro.build.version.sdk']}</div>
+                <div class="device-details">
+                    <div class="device-name">${device['ro.product.manufacturer']} ${device['ro.product.model']}</div>
+                    <div class="device-version-tags">
+                        <span class="release-version">Android ${device['ro.build.version.release']}</span>
+                        <span class="device-metadata-separator" aria-hidden="true">·</span>
+                        <span class="sdk-version">SDK ${device['ro.build.version.sdk']}</span>
                     </div>
                 </div>
+                <div class="device-state" title="State: ${device.state}"></div>
                 <div class="device-settings-row"></div>
             </div>
             <div id="${servicesId}" class="services"></div>
@@ -414,14 +411,14 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
                     'aria-label',
                     `Open stream for ${device['ro.product.manufacturer']} ${device['ro.product.model']}`.trim(),
                 );
-                const titleRow = card.querySelector('.device-title-row');
-                if (titleRow) {
+                const header = card.querySelector('.device-header');
+                if (header) {
                     const openHint = document.createElement('span');
                     openHint.className = 'device-open-hint';
                     openHint.title = 'Open stream';
                     openHint.setAttribute('aria-hidden', 'true');
-                    openHint.appendChild(SvgImage.create(SvgImage.Icon.FULLSCREEN));
-                    titleRow.appendChild(openHint);
+                    openHint.textContent = '›';
+                    header.appendChild(openHint);
                 }
                 streamLink.addEventListener('click', () => {
                     this.refreshStreamLink(card, device.udid);
