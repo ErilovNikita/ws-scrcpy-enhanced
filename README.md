@@ -19,6 +19,15 @@ An enhanced version of [NetrisTV/ws-scrcpy](https://github.com/NetrisTV/ws-scrcp
 
 ## Requirements
 
+### iPhone Home Screen
+
+Open the app in Safari, tap **Share → Add to Home Screen**, and add **WS scrcpy**.
+The app includes a dedicated Apple touch icon, a web app manifest, and standalone display metadata.
+After updating an existing installation, remove the old Home Screen shortcut and add it again to refresh its icon and name.
+Device streaming still requires a connection to the server; offline operation is not provided.
+
+### Browser and server
+
 Browser must support the following technologies:
 * WebSockets
 * Media Source Extensions and h264 decoding;

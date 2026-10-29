@@ -1,0 +1,11 @@
+App icon: MDI Devices, Material Design Icons by Pictogrammers.
+https://pictogrammers.com/library/mdi/icon/devices/
+https://github.com/Templarian/MaterialDesign/blob/master/svg/devices.svg
+License: Apache-2.0; see LICENSE-MDI.txt and LICENSE-APACHE-2.0.txt.
+Modifications: white glyph, blue/teal gradient background, padding and PNG exports.
+
+Regenerate PNGs with rsvg-convert (librsvg):
+rsvg-convert -w 180 -h 180 icon.svg -o apple-touch-icon.png
+rsvg-convert -w 192 -h 192 icon.svg -o icon-192.png
+rsvg-convert -w 512 -h 512 icon.svg -o icon-512.png
+rsvg-convert -w 32 -h 32 icon.svg -o favicon-32.png

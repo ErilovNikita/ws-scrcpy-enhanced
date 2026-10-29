@@ -98,6 +98,24 @@ const front: webpack.Configuration = {
             inject: 'head',
         }),
         new MiniCssExtractPlugin(),
+        {
+            apply(compiler: webpack.Compiler): void {
+                const directory = path.join(PROJECT_ROOT, 'src/public/pwa');
+                compiler.hooks.thisCompilation.tap('PwaAssets', (compilation) => {
+                    compilation.contextDependencies.add(directory);
+                    compilation.hooks.processAssets.tap(
+                        { name: 'PwaAssets', stage: webpack.Compilation.PROCESS_ASSETS_STAGE_ADDITIONAL },
+                        () => {
+                            for (const filename of fs.readdirSync(directory)) {
+                                const file = path.join(directory, filename);
+                                compilation.fileDependencies.add(file);
+                                compilation.emitAsset(`pwa/${filename}`, new webpack.sources.RawSource(fs.readFileSync(file)));
+                            }
+                        },
+                    );
+                });
+            },
+        },
         new webpack.ProvidePlugin({
             Buffer: ['buffer', 'Buffer'],
         }),
