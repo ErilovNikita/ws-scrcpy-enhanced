@@ -93,6 +93,7 @@ export class StreamClientScrcpy
     private moreBox?: GoogMoreBox;
     private player?: BasePlayer;
     private filePushHandler?: FilePushHandler;
+    private uploadNotifications?: DragAndPushLogger;
     private fitToScreen?: boolean;
     private hasExplicitFitToScreen = false;
     private displaySettingsInitialized = false;
@@ -437,6 +438,8 @@ export class StreamClientScrcpy
 
             this.filePushHandler?.release();
             this.filePushHandler = undefined;
+            this.uploadNotifications?.dispose();
+            this.uploadNotifications = undefined;
             this.uiStateBinding?.dispose();
             this.uiStateBinding = undefined;
             this.uiStateRestored = false;
@@ -611,7 +614,8 @@ export class StreamClientScrcpy
         }
         this.scheduleViewportFit();
         const element = player.getTouchableElement();
-        const logger = new DragAndPushLogger(element);
+        this.uploadNotifications?.dispose();
+        const logger = (this.uploadNotifications = new DragAndPushLogger());
         let lastDestinationDir = '/sdcard/Download';
         this.filePushHandler = new FilePushHandler(element, new ScrcpyFilePushStream(this.streamReceiver), {
             resolveDestinationDir: () => {

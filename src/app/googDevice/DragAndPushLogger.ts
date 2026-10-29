@@ -1,150 +1,134 @@
+import '../../style/upload-notifications.css';
 import FilePushHandler, { DragAndPushListener, PushUpdateParams } from './filePush/FilePushHandler';
+import SvgImage from '../ui/SvgImage';
 
-const TAG = '[DragAndPushLogger]';
+type UploadNotice = {
+    element: HTMLElement;
+    title: HTMLElement;
+    message: HTMLElement;
+    progress: HTMLProgressElement;
+    close: HTMLButtonElement;
+    timeout?: number;
+};
 
 export default class DragAndPushLogger implements DragAndPushListener {
-    private static readonly X: number = 20;
-    private static readonly Y: number = 40;
-    private static readonly HEIGHT = 14;
-    private static readonly LOG_BACKGROUND: string = 'rgba(0,0,0, 0.5)';
-    private static readonly DEBUG_COLOR: string = 'hsl(136, 85%,50%)';
-    private static readonly ERROR_COLOR: string = 'hsl(336,85%,50%)';
+    private readonly holder = document.createElement('div');
+    private readonly notices = new Map<string, UploadNotice>();
+    private dragNotice?: HTMLElement;
 
-    private readonly ctx: CanvasRenderingContext2D | null = null;
-    private timeoutMap: Map<number, number> = new Map();
-    private dirtyMap: Map<number, number> = new Map();
-    private pushLineMap: Map<string, number> = new Map();
-    private linePushMap: Map<number, string> = new Map();
-    private dirtyLines: boolean[] = [];
-    constructor(element: HTMLElement) {
-        if (element instanceof HTMLCanvasElement) {
-            const canvas = element as HTMLCanvasElement;
-            this.ctx = canvas.getContext('2d');
-        }
+    constructor() {
+        this.holder.className = 'upload-notifications';
+        this.holder.setAttribute('aria-label', 'File uploads');
+        document.body.appendChild(this.holder);
     }
 
-    private getCanvasScale(): number {
-        if (!this.ctx) {
-            return 1;
-        }
-        const canvas = this.ctx.canvas;
-        const rect = canvas.getBoundingClientRect();
-        if (rect.width > 0) {
-            const scale = canvas.width / rect.width;
-            if (Number.isFinite(scale) && scale > 0) {
-                return scale;
-            }
-        }
-        const dpr = window.devicePixelRatio || 1;
-        return dpr > 0 ? dpr : 1;
+    private createNotice(key: string, fileName: string): UploadNotice {
+        const element = document.createElement('section');
+        element.className = 'upload-notification';
+        const icon = document.createElement('div');
+        icon.className = 'upload-notification-icon';
+        icon.appendChild(SvgImage.create(SvgImage.Icon.UPLOAD));
+        icon.setAttribute('aria-hidden', 'true');
+        const content = document.createElement('div');
+        content.className = 'upload-notification-content';
+        const title = document.createElement('strong');
+        title.textContent = 'Uploading file';
+        title.setAttribute('role', 'status');
+        const name = document.createElement('div');
+        name.className = 'upload-notification-name';
+        name.textContent = name.title = fileName;
+        const message = document.createElement('small');
+        const progress = document.createElement('progress');
+        progress.max = 100;
+        progress.value = 0;
+        progress.setAttribute('aria-label', `Upload progress for ${fileName}`);
+        const close = document.createElement('button');
+        close.type = 'button';
+        close.textContent = '×';
+        close.setAttribute('aria-label', `Dismiss notification for ${fileName}`);
+        close.hidden = true;
+        content.append(title, name, message, progress);
+        element.append(icon, content, close);
+        const notice = { element, title, message, progress, close };
+        close.addEventListener('click', () => this.removeNotice(notice));
+        this.notices.set(key, notice);
+        this.holder.appendChild(element);
+        return notice;
     }
 
-    cleanDirtyLine = (line: number): void => {
-        if (!this.ctx) {
-            return;
-        }
-        const scale = this.getCanvasScale();
-        const { X, Y, HEIGHT } = DragAndPushLogger;
-        const height = HEIGHT * scale;
-        const x = X * scale;
-        const y = Y * scale + height * line * 2;
-        const dirty = this.dirtyMap.get(line);
-        if (dirty) {
-            const p = height / 2;
-            const d = p * 2;
-            this.ctx.clearRect(x - p, y - height - p, dirty + d, height + d);
-        }
-        this.dirtyLines[line] = false;
-    };
-    private logText(text: string, line: number, scheduleCleanup = false, error = false): void {
-        if (!this.ctx) {
-            error ? console.error(TAG, text) : console.log(TAG, text);
-            return;
-        }
-        if (error) {
-            console.error(TAG, text);
-        }
-        this.cleanDirtyLine(line);
-
-        const scale = this.getCanvasScale();
-        const { X, Y, HEIGHT } = DragAndPushLogger;
-        const height = HEIGHT * scale;
-        const x = X * scale;
-        const y = Y * scale + height * line * 2;
-        this.ctx.save();
-        this.ctx.font = `${height}px monospace`;
-        const textMetrics = this.ctx.measureText(text);
-        const width = Math.abs(textMetrics.actualBoundingBoxLeft) + Math.abs(textMetrics.actualBoundingBoxRight);
-        this.dirtyMap.set(line, width);
-        this.ctx.fillStyle = DragAndPushLogger.LOG_BACKGROUND;
-        const p = height / 2 - scale;
-        const d = p * 2;
-        this.ctx.fillRect(x - p, y - height - p, width + d, height + d);
-        this.ctx.fillStyle = error ? DragAndPushLogger.ERROR_COLOR : DragAndPushLogger.DEBUG_COLOR;
-        this.ctx.fillText(text, x, y);
-        this.ctx.restore();
-        if (scheduleCleanup) {
-            this.dirtyLines[line] = true;
-            let timeout = this.timeoutMap.get(line);
-            if (timeout) {
-                clearTimeout(timeout);
+    private removeNotice(notice: UploadNotice): void {
+        window.clearTimeout(notice.timeout);
+        notice.element.remove();
+        this.notices.forEach((value, key) => {
+            if (value === notice) {
+                this.notices.delete(key);
             }
-            timeout = window.setTimeout(() => {
-                this.cleanDirtyLine(line);
-                const key = this.linePushMap.get(line);
-                if (typeof key === 'string') {
-                    this.linePushMap.delete(line);
-                    this.pushLineMap.delete(key);
-                }
-            }, 5000);
-            this.timeoutMap.set(line, timeout);
-        }
+        });
     }
 
     public onDragEnter(): boolean {
-        this.logText('Drop files here', 1);
+        if (!this.dragNotice) {
+            this.dragNotice = document.createElement('div');
+            this.dragNotice.className = 'upload-drop-notice';
+            this.dragNotice.textContent = 'Drop files to upload to this device';
+            this.dragNotice.setAttribute('role', 'status');
+            this.holder.prepend(this.dragNotice);
+        }
         return true;
     }
 
     public onDragLeave(): boolean {
-        this.cleanDirtyLine(1);
+        this.dragNotice?.remove();
+        this.dragNotice = undefined;
         return true;
     }
 
     public onDrop(): boolean {
-        this.cleanDirtyLine(1);
-        return true;
+        return this.onDragLeave();
     }
 
     public onError(error: Error | string): void {
-        const text = typeof error === 'string' ? error : error.message;
-        this.logText(text, 1, true);
+        const notice = this.createNotice(`error_${Date.now()}`, 'File upload');
+        notice.element.classList.add('error');
+        notice.title.textContent = 'Upload failed';
+        notice.message.textContent = typeof error === 'string' ? error : error.message;
+        notice.message.setAttribute('role', 'alert');
+        notice.progress.hidden = true;
+        notice.close.hidden = false;
     }
 
-    onFilePushUpdate(data: PushUpdateParams): void {
-        const { pushId, message, fileName, error } = data;
+    public onFilePushUpdate(data: PushUpdateParams): void {
+        const { pushId, fileName, message, progress, error, finished } = data;
         const key = `${pushId}/${fileName}`;
-        const firstKey = `${FilePushHandler.REQUEST_NEW_PUSH_ID}/${fileName}`;
-        let line: number | undefined = this.pushLineMap.get(key);
-        let update = false;
-        if (typeof line === 'undefined' && key !== firstKey) {
-            line = this.pushLineMap.get(firstKey);
-            if (typeof line !== 'undefined') {
-                this.pushLineMap.delete(firstKey);
-                update = true;
+        const pendingKey = `${FilePushHandler.REQUEST_NEW_PUSH_ID}/${fileName}`;
+        let notice = this.notices.get(key);
+        if (!notice && key !== pendingKey) {
+            notice = this.notices.get(pendingKey);
+            if (notice) {
+                this.notices.delete(pendingKey);
+                this.notices.set(key, notice);
             }
         }
-        if (typeof line === 'undefined') {
-            line = 2;
-            while (this.dirtyLines[line]) {
-                line++;
-            }
-            update = true;
+        notice = notice || this.createNotice(key, fileName);
+        window.clearTimeout(notice.timeout);
+        notice.element.classList.toggle('error', error);
+        notice.element.classList.toggle('success', finished && !error);
+        notice.title.textContent = error ? 'Upload failed' : finished ? 'File uploaded' : 'Uploading file';
+        const percent = Number.isFinite(progress) ? Math.max(0, Math.min(100, progress)) : 0;
+        notice.progress.value = percent;
+        notice.progress.hidden = error;
+        notice.message.textContent = error ? message : finished ? 'Saved to your device' : `${Math.floor(percent)}%`;
+        notice.message.setAttribute('role', error ? 'alert' : 'presentation');
+        notice.close.hidden = !finished && !error;
+        if (finished && !error) {
+            const completed = notice;
+            notice.timeout = window.setTimeout(() => this.removeNotice(completed), 5000);
         }
-        if (update) {
-            this.pushLineMap.set(key, line);
-            this.linePushMap.set(line, key);
-        }
-        this.logText(`Upload "${fileName}": ${message}`, line, true, error);
+    }
+
+    public dispose(): void {
+        this.notices.forEach((notice) => window.clearTimeout(notice.timeout));
+        this.notices.clear();
+        this.holder.remove();
     }
 }

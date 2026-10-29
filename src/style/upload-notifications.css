@@ -1,0 +1,145 @@
+.upload-notifications {
+    position: fixed;
+    top: 76px;
+    right: 20px;
+    z-index: 40;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: min(380px, calc(100vw - 32px));
+    max-height: calc(100dvh - 92px);
+    overflow-y: auto;
+    pointer-events: none;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.upload-notification,
+.upload-drop-notice {
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    padding: 14px;
+    border: 1px solid #dfe6ef;
+    border-radius: 12px;
+    background: #fff;
+    color: #243044;
+    box-shadow: 0 6px 24px #15243b24;
+    pointer-events: auto;
+}
+
+.upload-notification {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.upload-notification-icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 36px;
+    height: 36px;
+    border-radius: 9px;
+    background: #e9f2ff;
+    color: #2476ff;
+}
+
+.upload-notification-icon svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+}
+
+.upload-notification-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.upload-notification strong {
+    display: block;
+    font-weight: 600;
+}
+
+.upload-notification-name {
+    margin: 3px 0;
+    overflow-wrap: anywhere;
+    font-size: 13px;
+}
+
+.upload-notification small {
+    color: #66758c;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+}
+
+.upload-notification progress {
+    display: block;
+    width: 100%;
+    height: 5px;
+    margin-top: 10px;
+    overflow: hidden;
+    border: 0;
+    border-radius: 4px;
+    background: #e9edf4;
+    accent-color: #2476ff;
+}
+
+.upload-notification progress::-webkit-progress-bar {
+    background: #e9edf4;
+}
+
+.upload-notification progress::-webkit-progress-value {
+    background: #2476ff;
+}
+
+.upload-notification progress::-moz-progress-bar {
+    background: #2476ff;
+}
+
+.upload-notification button {
+    flex: 0 0 auto;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #66758c;
+    font: inherit;
+    font-size: 21px;
+    cursor: pointer;
+}
+
+.upload-notification button:hover {
+    background: #f0f3f8;
+}
+
+.upload-notification button:focus-visible {
+    outline: 2px solid #2476ff;
+    outline-offset: 2px;
+}
+
+.upload-notification.success .upload-notification-icon {
+    background: #e1f6eb;
+    color: #11975c;
+}
+
+.upload-notification.error .upload-notification-icon {
+    background: #ffebef;
+    color: #d62e50;
+}
+
+.upload-notification.error strong {
+    color: #b92140;
+}
+
+.upload-notifications [hidden] {
+    display: none;
+}
+
+@media (max-width: 600px) {
+    .upload-notifications {
+        top: 68px;
+        right: 16px;
+    }
+}
