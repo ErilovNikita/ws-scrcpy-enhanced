@@ -636,15 +636,18 @@ body.list #devices .device-settings-overlay {
 }
 
 body.list #devices .device-settings-dialog {
-    width: min(1080px, 100%);
+    width: min(880px, 100%);
     max-height: 100%;
-    border-radius: 22px;
+    font-family: inherit;
+    font-size: var(--font-size);
+    line-height: 1.4;
+    border-radius: 14px;
     box-shadow: 0 28px 80px hsla(218, 30%, 15%, .28);
 }
 
 body.list #devices .device-settings-header {
     align-items: flex-start;
-    padding: 32px;
+    padding: 20px 24px;
 }
 
 body.list #devices .device-settings-heading {
@@ -652,9 +655,9 @@ body.list #devices .device-settings-heading {
 }
 
 body.list #devices .device-settings-title {
-    font-size: 28px;
-    font-weight: 700;
-    letter-spacing: -.025em;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: normal;
     white-space: normal;
     overflow-wrap: anywhere;
 }
@@ -663,24 +666,24 @@ body.list #devices .device-settings-metadata {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 18px;
-    margin-top: 14px;
+    gap: 12px;
+    margin-top: 10px;
     color: var(--device-muted-color);
-    font-size: 17px;
+    font-size: var(--font-size);
 }
 
 body.list #devices .device-settings-status {
     display: inline-flex;
     align-items: center;
     gap: 10px;
-    padding: 7px 14px;
+    padding: 4px 10px;
     border-radius: 16px;
     background: #f0f2f6;
 }
 
 body.list #devices .device-settings-status::before {
-    width: 12px;
-    height: 12px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
     background: currentColor;
     content: '';
@@ -694,24 +697,24 @@ body.list #devices .device-settings-status.online {
 body.list #devices .device-settings-close {
     display: grid;
     place-items: center;
-    width: 46px;
-    height: 46px;
+    width: 32px;
+    height: 32px;
     padding: 0;
     border-radius: 10px;
     background: #f5f6f9;
-    font-size: 30px;
+    font-size: 22px;
     line-height: 1;
 }
 
 body.list #devices .device-list .device-settings-content {
-    padding: 24px 32px 32px;
+    padding: 16px 24px 24px;
 }
 
 body.list #devices .device-list .device-settings-actions {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 12px;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
     padding-bottom: 16px;
     border-bottom: 1px solid var(--device-border-color);
 }
@@ -720,8 +723,8 @@ body.list #devices .device-list .device-settings-actions .desc-block > a,
 body.list #devices .device-list .device-settings-actions .desc-block > button.action-button {
     box-sizing: border-box;
     width: 100%;
-    height: 42px;
-    min-height: 42px;
+    height: 36px;
+    min-height: 36px;
     gap: 10px;
     padding: 0 12px;
     border-color: transparent;
@@ -744,9 +747,9 @@ body.list #devices .device-list .device-settings-actions .desc-block > button.ac
 body.list #devices .device-list .device-settings-content .services {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    grid-auto-rows: 140px;
+    grid-auto-rows: 112px;
     align-items: stretch;
-    gap: 16px;
+    gap: 12px;
 }
 
 body.list #devices .device-list .device-settings-content .services > .desc-block {
@@ -762,7 +765,7 @@ body.list #devices .device-list .device-settings-content .services > .desc-block
     height: 100%;
     min-height: 0;
     margin: 0;
-    padding: 18px;
+    padding: 12px;
     border: 1px solid #e2e7f0;
     border-radius: 12px;
     background: #fcfdff;
@@ -770,7 +773,7 @@ body.list #devices .device-list .device-settings-content .services > .desc-block
 
 body.list #devices .device-setting-label {
     width: 100%;
-    font-size: 15px;
+    font-size: var(--font-size);
     font-weight: 500;
 }
 
@@ -778,7 +781,7 @@ body.list #devices .device-list .device-settings-content .services select {
     flex: 1;
     min-width: 0;
     max-width: 100%;
-    font-size: 16px;
+    font-size: var(--font-size);
 }
 
 body.list #devices .device-list .device-settings-content .services .action-button {
@@ -794,24 +797,24 @@ body.list #devices .device-list .device-settings-content .device-player-card > a
     padding: 0 20px 0 0;
     border: 0;
     background: transparent;
-    font-size: 18px;
-    font-weight: 650;
+    font-size: var(--font-size);
+    font-weight: 600;
 }
 
 body.list #devices .device-list .device-settings-content .device-player-card > a:first-child::after {
     position: absolute;
-    right: 18px;
+    right: 12px;
     content: '›';
-    font-size: 28px;
+    font-size: 18px;
     font-weight: 400;
 }
 
 body.list #devices .device-list .device-settings-content .device-player-card > a:first-child > svg {
     box-sizing: content-box;
-    width: 26px;
-    height: 26px;
-    padding: 12px;
-    border-radius: 12px;
+    width: 20px;
+    height: 20px;
+    padding: 8px;
+    border-radius: 8px;
     background: #e6efff;
     color: #2476ff;
 }
@@ -832,9 +835,9 @@ body.list #devices .device-list .device-settings-content .device-player-card:nth
 }
 
 body.list #devices .device-list .device-settings-content .device-player-card > a.link-stream-webrtc {
-    min-height: 30px;
-    margin-left: 59px;
-    padding: 5px 12px;
+    min-height: 26px;
+    margin-left: 45px;
+    padding: 4px 10px;
     border: 0;
     border-radius: 14px;
     background: #e6efff;
@@ -866,7 +869,7 @@ body.list #devices .device-settings-dialog select:focus-visible {
     }
 
     body.list #devices .device-settings-title {
-        font-size: 23px;
+        font-size: 18px;
     }
 
     body.list #devices .device-list .device-settings-content .services {
@@ -880,8 +883,8 @@ body.list #devices .device-settings-dialog select:focus-visible {
 
     body.list #devices .device-list .device-settings-actions .desc-block > a,
     body.list #devices .device-list .device-settings-actions .desc-block > button.action-button {
-        height: 42px;
-        min-height: 42px;
+        height: 36px;
+        min-height: 36px;
         padding: 0 8px;
         gap: 10px;
         font-size: 14px;
@@ -905,4 +908,18 @@ body.list #devices .device-list .device-settings-content .device-player-card > a
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+body.list #devices .device-setting-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+body.list #devices .device-setting-label > svg {
+    flex: 0 0 auto;
+    width: 20px;
+    height: 20px;
+    fill: none;
+    color: var(--device-accent-color);
 }

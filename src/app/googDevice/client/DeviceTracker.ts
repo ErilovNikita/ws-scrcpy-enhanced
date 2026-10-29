@@ -275,6 +275,11 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
             const label = document.createElement('span');
             label.className = 'device-setting-label';
             label.innerText = fieldName === 'interfaces' ? 'Connection method' : 'Server PID';
+            const settingIcon = SvgImage.create(
+                fieldName === 'interfaces' ? SvgImage.Icon.CONNECTION : SvgImage.Icon.SERVER,
+            );
+            settingIcon.setAttribute('aria-hidden', 'true');
+            label.prepend(settingIcon);
             td.appendChild(label);
             td.classList.add(DeviceTracker.titleToClassName(title), blockClass);
             services.appendChild(td);

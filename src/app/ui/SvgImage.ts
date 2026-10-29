@@ -18,6 +18,9 @@ import ToggleOffSVG from '../../public/images/buttons/toggle_off.svg';
 import FullscreenSVG from '../../public/images/iconfont/fullscreen.svg';
 import UploadSVG from '../../public/images/iconfont/upload.svg';
 
+import ConnectionSVG from '../../public/images/buttons/connection.svg';
+import ServerSVG from '../../public/images/buttons/server.svg';
+
 export enum Icon {
     BACK,
     HOME,
@@ -38,6 +41,8 @@ export enum Icon {
     TOGGLE_OFF,
     FULLSCREEN,
     UPLOAD,
+    CONNECTION,
+    SERVER,
 }
 
 export default class SvgImage {
@@ -80,6 +85,10 @@ export default class SvgImage {
                 return ToggleOffSVG;
             case Icon.FULLSCREEN:
                 return FullscreenSVG;
+            case Icon.CONNECTION:
+                return ConnectionSVG;
+            case Icon.SERVER:
+                return ServerSVG;
             case Icon.UPLOAD:
                 return UploadSVG;
             default:
