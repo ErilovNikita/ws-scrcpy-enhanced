@@ -48,15 +48,25 @@ export class GoogMoreBox {
         closeButton.type = 'button';
         closeButton.innerText = '×';
         closeButton.setAttribute('aria-label', 'Close stream settings');
-        header.append(nameBox, closeButton);
+        const heading = document.createElement('div');
+        heading.className = 'more-box-heading';
+        const subtitle = document.createElement('small');
+        subtitle.textContent = 'Send input, control device and configure quick settings';
+        heading.append(nameBox, subtitle);
+        header.append(heading, closeButton);
         moreBox.appendChild(header);
+        const body = document.createElement('div');
+        body.className = 'more-box-body';
+        moreBox.appendChild(body);
         const input = (this.input = document.createElement('textarea'));
         input.classList.add('text-area');
+        input.placeholder = 'Type text or key combination…';
+        input.setAttribute('aria-label', 'Text to send to the device');
         input.id = `text_input_${udid}_${playerName}_${displayId}`;
         const sendButton = document.createElement('button');
         sendButton.innerText = 'Send as keys';
 
-        const inputWrapper = GoogMoreBox.wrap('p', [input, sendButton], moreBox);
+        const inputWrapper = GoogMoreBox.wrap('div', [input, sendButton], body, ['stream-input-section']);
         sendButton.onclick = () => {
             if (input.value) {
                 client.sendMessage(new TextControlMessage(input.value));
@@ -210,7 +220,42 @@ export class GoogMoreBox {
                 };
             }
         }
-        GoogMoreBox.wrap('p', commands, moreBox);
+        const inputActions = document.createElement('div');
+        inputActions.className = 'stream-input-actions';
+        Array.from(inputWrapper.querySelectorAll('button')).forEach((button) => inputActions.appendChild(button));
+        inputWrapper.appendChild(inputActions);
+        sendButton.classList.add('primary-action');
+        const commandGrid = document.createElement('div');
+        commandGrid.className = 'stream-command-grid';
+        commands.filter((command) => command instanceof HTMLButtonElement).forEach((button) => {
+            commandGrid.appendChild(button);
+        });
+        body.appendChild(commandGrid);
+        commands.filter((command) => command.classList.contains('spoiler')).forEach((spoiler) => {
+            const description = document.createElement('small');
+            description.textContent = 'Quick display and stream options';
+            spoiler.querySelector('label')?.appendChild(description);
+            body.appendChild(spoiler);
+        });
+
+        const audioPanel = document.createElement('section');
+        audioPanel.className = 'stream-audio-panel';
+        const audioHeading = document.createElement('div');
+        audioHeading.className = 'stream-audio-heading';
+        const audioTitle = document.createElement('h3');
+        audioTitle.textContent = 'Audio settings';
+        const audioSubtitle = document.createElement('small');
+        audioSubtitle.textContent = 'Configure audio playback for this device';
+        audioHeading.append(audioTitle, audioSubtitle);
+        const audioColumns = document.createElement('div');
+        audioColumns.className = 'stream-audio-columns';
+        const audioGeneral = document.createElement('div');
+        audioGeneral.className = 'stream-audio-general';
+        const audioOptions = document.createElement('div');
+        audioOptions.className = 'stream-audio-options';
+        audioColumns.append(audioGeneral, audioOptions);
+        audioPanel.append(audioHeading, audioColumns);
+        body.appendChild(audioPanel);
 
         const screenPowerModeId = `screen_power_mode_${udid}_${playerName}_${displayId}`;
         const screenPowerModeLabel = document.createElement('label');
@@ -253,7 +298,7 @@ export class GoogMoreBox {
             sendCurrentScreenPowerMode();
             startScreenPowerModeIntervalIfNeeded();
         };
-        GoogMoreBox.wrap('p', [screenPowerModeCheck, screenPowerModeLabel], moreBox, ['flex-center']);
+        GoogMoreBox.wrap('p', [screenPowerModeCheck, screenPowerModeLabel], audioGeneral, ['flex-center']);
 
         const qualityId = `show_video_quality_${udid}_${playerName}_${displayId}`;
         const qualityLabel = document.createElement('label');
@@ -263,7 +308,7 @@ export class GoogMoreBox {
         qualityCheck.id = qualityId;
         qualityLabel.htmlFor = qualityId;
         qualityLabel.innerText = 'Show quality stats';
-        GoogMoreBox.wrap('p', [qualityCheck, qualityLabel], moreBox, ['flex-center']);
+        GoogMoreBox.wrap('p', [qualityCheck, qualityLabel], audioGeneral, ['flex-center']);
         qualityCheck.onchange = () => {
             player.setShowQualityStats(qualityCheck.checked);
         };
@@ -277,7 +322,7 @@ export class GoogMoreBox {
         audioLabel.htmlFor = audioId;
         audioCheck.dataset.persistSkipRestore = 'true';
 
-        GoogMoreBox.wrap('p', [audioCheck, audioLabel], moreBox, ['flex-center']);
+        GoogMoreBox.wrap('p', [audioCheck, audioLabel], audioGeneral, ['flex-center']);
         let removeAudioStatusListener: (() => void) | undefined;
 
         if (ScrcpyAudioController.isSupported()) {
@@ -285,10 +330,10 @@ export class GoogMoreBox {
             const audioHelp = document.createElement('small');
             audioHelp.innerText =
                 'If you do not hear audio in the browser, tap or click the page once to allow playback.';
-            GoogMoreBox.wrap('p', [audioHelp], moreBox);
+            GoogMoreBox.wrap('p', [audioHelp], audioGeneral, ['audio-help']);
             const audioStatus = document.createElement('small');
             audioStatus.innerText = `Audio: ${client.getAudioStatus()}`;
-            GoogMoreBox.wrap('p', [audioStatus], moreBox);
+            GoogMoreBox.wrap('p', [audioStatus], audioGeneral, ['audio-status']);
             removeAudioStatusListener = client.addAudioStatusListener((status) => {
                 audioStatus.innerText = `Audio: ${status}`;
             });
@@ -313,7 +358,7 @@ export class GoogMoreBox {
             modeSelect.appendChild(modeCombined);
             modeSelect.appendChild(modeSplit);
             modeSelect.value = currentAudio.frameMode;
-            GoogMoreBox.wrap('div', [modeLabel, modeSelect], moreBox);
+            GoogMoreBox.wrap('div', [modeLabel, modeSelect], audioOptions);
 
             const channelsLabel = document.createElement('label');
             channelsLabel.innerText = 'Channels:';
@@ -329,7 +374,7 @@ export class GoogMoreBox {
             channelsSelect.appendChild(ch1);
             channelsSelect.appendChild(ch2);
             channelsSelect.value = String(currentAudio.channels || 1);
-            GoogMoreBox.wrap('div', [channelsLabel, channelsSelect], moreBox);
+            GoogMoreBox.wrap('div', [channelsLabel, channelsSelect], audioOptions);
 
             const bitrateLabel = document.createElement('label');
             bitrateLabel.innerText = 'Bitrate:';
@@ -340,7 +385,10 @@ export class GoogMoreBox {
             bitrateInput.value = String(currentAudio.bitrate || 64_000);
             bitrateInput.id = `audio_bitrate_${udid}_${playerName}_${displayId}`;
             bitrateLabel.htmlFor = bitrateInput.id;
-            GoogMoreBox.wrap('div', [bitrateLabel, bitrateInput], moreBox);
+            const bitrateRow = GoogMoreBox.wrap('div', [bitrateLabel, bitrateInput], audioOptions);
+            const bitrateHelp = document.createElement('small');
+            bitrateHelp.textContent = 'Audio bitrate in bits per second';
+            bitrateRow.appendChild(bitrateHelp);
 
             const applyAudioBtn = document.createElement('button');
             applyAudioBtn.innerText = 'Apply audio settings';
@@ -358,7 +406,7 @@ export class GoogMoreBox {
                     client.setAudioEnabled(true);
                 }
             };
-            GoogMoreBox.wrap('p', [applyAudioBtn], moreBox);
+            GoogMoreBox.wrap('p', [applyAudioBtn], audioOptions);
         } else {
             audioLabel.innerText = 'Audio (unsupported)';
             audioCheck.disabled = true;
@@ -389,6 +437,18 @@ export class GoogMoreBox {
         footer.className = 'more-box-footer';
         footer.appendChild(stopBtn);
         moreBox.appendChild(footer);
+        moreBox.querySelectorAll('button').forEach((button) => {
+            if (button === closeButton) {
+                return;
+            }
+            const label = button.textContent || '';
+            const icon = GoogMoreBox.createActionIcon(label);
+            const text = document.createElement('span');
+            text.textContent = label;
+            button.textContent = '';
+            button.append(icon, text);
+        });
+        audioHeading.prepend(GoogMoreBox.createActionIcon('Audio'));
         overlay.appendChild(moreBox);
 
         const close = (): void => {
@@ -492,6 +552,33 @@ export class GoogMoreBox {
         this.input.value = ev.getText();
         this.input.select();
         document.execCommand('copy');
+    }
+
+    private static createActionIcon(label: string): SVGSVGElement {
+        const paths: Record<string, string> = {
+            'Send as keys': 'm8 5 11 7-11 7V5Z',
+            'Get clipboard': 'M9 5H5v15h12v-4M9 2h12v14H9z',
+            'Set clipboard': 'M12 16V3m-5 5 5-5 5 5M4 14v7h16v-7',
+            'Expand notifications': 'M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4',
+            'Expand settings': 'M4 6h16M4 12h16M4 18h16M8 3v6m8 0v6m-6 0v6',
+            'Collapse panels': 'M4 9V4h5m6 0h5v5M4 15v5h5m6 0h5v-5M8 8l4 4 4-4m-8 8 4-4 4 4',
+            'Rotate device': 'M4 9V3m0 0h6M4 3l4 4m12 8v6m0 0h-6m6 0-4-4M9 4h8v16H7V9',
+            'Apply audio settings': 'm4 12 5 5L20 6',
+            'Disconnect': 'M6 10h12v11H6zM8 10V6a4 4 0 0 1 8 0v4',
+            Audio: 'M4 9h4l5-5v16l-5-5H4zM16 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14',
+        };
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('viewBox', '0 0 24 24');
+        svg.setAttribute('fill', 'none');
+        svg.setAttribute('stroke', 'currentColor');
+        svg.setAttribute('stroke-width', '1.8');
+        svg.setAttribute('stroke-linecap', 'round');
+        svg.setAttribute('stroke-linejoin', 'round');
+        svg.setAttribute('aria-hidden', 'true');
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', paths[label] || 'M4 6h16M4 12h16M4 18h16');
+        svg.appendChild(path);
+        return svg;
     }
 
     private static wrap(

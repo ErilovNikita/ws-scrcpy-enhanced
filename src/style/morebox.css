@@ -205,3 +205,281 @@ body.stream .scrcpy-settings-dialog .more-box-footer button {
         border-radius: 12px;
     }
 }
+
+body.stream .scrcpy-settings-dialog {
+    width: min(920px, 100%);
+    max-height: 100%;
+    overflow: hidden;
+    line-height: 1.4;
+}
+
+body.stream .scrcpy-settings-dialog > .more-box-header {
+    flex: 0 0 auto;
+    padding: 16px 24px;
+}
+
+body.stream .scrcpy-settings-dialog .more-box-heading {
+    min-width: 0;
+    padding-right: 12px;
+}
+
+body.stream .scrcpy-settings-dialog .more-box-header p {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+body.stream .scrcpy-settings-dialog small {
+    display: block;
+    color: var(--text-color-light);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+body.stream .scrcpy-settings-dialog .more-box-heading small {
+    margin-top: 3px;
+}
+
+body.stream .scrcpy-settings-dialog > .more-box-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 16px 24px;
+    overflow: auto;
+}
+
+body.stream .scrcpy-settings-dialog .text-area {
+    display: block;
+    width: 100%;
+    min-height: 64px;
+    margin: 0 0 12px;
+    resize: vertical;
+}
+
+body.stream .scrcpy-settings-dialog .stream-input-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+body.stream .scrcpy-settings-dialog button:not(.more-box-close) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 36px;
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+body.stream .scrcpy-settings-dialog button > svg,
+body.stream .scrcpy-settings-dialog .stream-audio-heading > svg {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+}
+
+body.stream .scrcpy-settings-dialog button.primary-action {
+    background: var(--button-text-color);
+    border-color: var(--button-text-color);
+    color: white;
+}
+
+body.stream .scrcpy-settings-dialog button.primary-action:hover {
+    background: var(--link-color);
+    color: white;
+}
+
+body.stream .scrcpy-settings-dialog .stream-command-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin: 16px 0 12px;
+}
+
+body.stream .scrcpy-settings-dialog .stream-command-grid button {
+    min-height: 42px;
+    padding: 8px;
+}
+
+body.stream .scrcpy-settings-dialog .spoiler,
+body.stream .scrcpy-settings-dialog .stream-audio-panel {
+    margin-top: 12px;
+    overflow: hidden;
+    border: 1px solid hsl(216, 20%, 88%);
+    border-radius: 9px;
+    background: hsl(216, 33%, 99%);
+}
+
+body.stream .scrcpy-settings-dialog .spoiler > label {
+    display: block;
+    position: relative;
+    padding: 14px 16px 14px 44px;
+    cursor: pointer;
+}
+
+body.stream .scrcpy-settings-dialog .spoiler > label::before {
+    position: absolute;
+    left: 18px;
+    top: 16px;
+    width: 8px;
+    height: 8px;
+    margin: 0;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(-45deg);
+    content: '';
+}
+
+body.stream .scrcpy-settings-dialog .spoiler > input:checked + label::before {
+    transform: rotate(45deg);
+}
+
+body.stream .scrcpy-settings-dialog .spoiler > input:checked ~ .box {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 14px 16px;
+    border-top: 1px solid hsl(216, 20%, 88%);
+    border-radius: 0;
+    background: transparent;
+}
+
+body.stream .scrcpy-settings-dialog .spoiler .box > div {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(90px, 1fr);
+    align-items: center;
+    gap: 8px;
+    width: calc(50% - 5px);
+}
+
+body.stream .scrcpy-settings-dialog .spoiler .box input {
+    width: 100%;
+}
+
+body.stream .scrcpy-settings-dialog .stream-audio-panel {
+    padding: 16px;
+}
+
+body.stream .scrcpy-settings-dialog .stream-audio-heading {
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr);
+    align-items: center;
+    column-gap: 10px;
+    margin-bottom: 16px;
+}
+
+body.stream .scrcpy-settings-dialog .stream-audio-heading > svg {
+    grid-row: 1 / 3;
+    color: var(--button-text-color);
+}
+
+body.stream .scrcpy-settings-dialog .stream-audio-heading h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+body.stream .scrcpy-settings-dialog .stream-audio-columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+    gap: 24px;
+}
+
+body.stream .scrcpy-settings-dialog .stream-audio-general p {
+    margin: 0 0 10px;
+}
+
+body.stream .scrcpy-settings-dialog .stream-audio-general .flex-center {
+    gap: 10px;
+}
+
+body.stream .scrcpy-settings-dialog input[type="checkbox"] {
+    width: 17px;
+    height: 17px;
+    margin: 0;
+    accent-color: var(--button-text-color);
+}
+
+body.stream .scrcpy-settings-dialog .audio-status {
+    padding: 10px 12px;
+    border: 1px solid hsl(210, 90%, 86%);
+    border-radius: 7px;
+    background: hsl(210, 90%, 96%);
+}
+
+body.stream .scrcpy-settings-dialog .audio-status small {
+    color: var(--button-text-color);
+}
+
+body.stream .scrcpy-settings-dialog .stream-audio-options {
+    padding-left: 24px;
+    border-left: 1px solid hsl(216, 20%, 88%);
+}
+
+body.stream .scrcpy-settings-dialog .stream-audio-options > div {
+    display: grid;
+    grid-template-columns: 76px minmax(0, 1fr);
+    align-items: center;
+    gap: 6px 12px;
+    margin-bottom: 10px;
+}
+
+body.stream .scrcpy-settings-dialog .stream-audio-options input,
+body.stream .scrcpy-settings-dialog .stream-audio-options select {
+    width: 100%;
+    min-width: 0;
+}
+
+body.stream .scrcpy-settings-dialog .stream-audio-options small {
+    grid-column: 2;
+}
+
+body.stream .scrcpy-settings-dialog .stream-audio-options > p {
+    margin: 0;
+    padding-left: 88px;
+}
+
+body.stream .scrcpy-settings-dialog > .more-box-footer {
+    flex: 0 0 auto;
+    padding: 12px 24px;
+    background: hsl(216, 33%, 98%);
+}
+
+body.stream .scrcpy-settings-dialog .more-box-footer button {
+    border-color: hsl(342, 75%, 85%);
+}
+
+body.stream .scrcpy-settings-dialog button:focus-visible,
+body.stream .scrcpy-settings-dialog input:focus-visible,
+body.stream .scrcpy-settings-dialog textarea:focus-visible,
+body.stream .scrcpy-settings-dialog select:focus-visible {
+    outline: 2px solid var(--button-text-color);
+    outline-offset: 2px;
+}
+
+@media (max-width: 700px) {
+    body.stream .scrcpy-settings-dialog > .more-box-body,
+    body.stream .scrcpy-settings-dialog > .more-box-header,
+    body.stream .scrcpy-settings-dialog > .more-box-footer {
+        padding: 14px 16px;
+    }
+
+    body.stream .scrcpy-settings-dialog .stream-command-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    body.stream .scrcpy-settings-dialog .stream-audio-columns {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 14px;
+    }
+
+    body.stream .scrcpy-settings-dialog .stream-audio-options {
+        padding: 14px 0 0;
+        border-left: 0;
+        border-top: 1px solid hsl(216, 20%, 88%);
+    }
+
+    body.stream .scrcpy-settings-dialog .spoiler .box > div {
+        width: 100%;
+    }
+}
