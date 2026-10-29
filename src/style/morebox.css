@@ -483,3 +483,82 @@ body.stream .scrcpy-settings-dialog select:focus-visible {
         width: 100%;
     }
 }
+
+/* Native disclosures give video and audio the same keyboard and pointer behavior. */
+body.stream .scrcpy-settings-dialog .stream-audio-panel {
+    padding: 0;
+}
+
+body.stream .scrcpy-settings-dialog .settings-disclosure-heading {
+    display: grid;
+    grid-template-columns: 10px 20px minmax(0, 1fr);
+    align-items: center;
+    column-gap: 12px;
+    margin: 0;
+    padding: 14px 16px;
+    list-style: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+body.stream .scrcpy-settings-dialog .settings-disclosure-heading::-webkit-details-marker {
+    display: none;
+}
+
+body.stream .scrcpy-settings-dialog .settings-disclosure-heading::before {
+    box-sizing: border-box;
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(-45deg);
+    content: '';
+}
+
+body.stream .scrcpy-settings-dialog details[open] > .settings-disclosure-heading::before {
+    transform: rotate(45deg);
+}
+
+body.stream .scrcpy-settings-dialog .settings-disclosure-heading > svg {
+    grid-row: auto;
+    width: 20px;
+    height: 20px;
+    color: var(--button-text-color);
+}
+
+body.stream .scrcpy-settings-dialog .settings-disclosure-heading small {
+    margin-top: 2px;
+}
+
+body.stream .scrcpy-settings-dialog .settings-disclosure-heading:hover {
+    background: hsl(210, 60%, 97%);
+}
+
+body.stream .scrcpy-settings-dialog .settings-disclosure-heading:focus-visible {
+    outline: 2px solid var(--button-text-color);
+    outline-offset: -3px;
+    border-radius: 8px;
+}
+
+body.stream .scrcpy-settings-dialog .spoiler[open] > .box {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 14px 16px;
+    border-top: 1px solid hsl(216, 20%, 88%);
+}
+
+body.stream .scrcpy-settings-dialog .stream-audio-panel > .stream-audio-columns {
+    padding: 16px;
+    border-top: 1px solid hsl(216, 20%, 88%);
+}
+
+body.stream .scrcpy-settings-dialog details:not([open]) > :not(summary) {
+    display: none;
+}
+
+body.stream .scrcpy-settings-dialog .settings-disclosure-heading h3 {
+    font-size: inherit;
+    font-weight: inherit;
+}

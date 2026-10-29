@@ -83,20 +83,14 @@ export class GoogMoreBox {
             let maxWidthInput: HTMLInputElement;
             let maxHeightInput: HTMLInputElement;
             if (action === ControlMessage.TYPE_CHANGE_STREAM_PARAMETERS) {
-                const spoiler = document.createElement('div');
-                const spoilerLabel = document.createElement('label');
-                const spoilerCheck = document.createElement('input');
+                const spoiler = document.createElement('details');
+                const spoilerLabel = document.createElement('summary');
 
                 const innerDiv = document.createElement('div');
-                const id = `spoiler_video_${udid}_${playerName}_${displayId}_${action}`;
-
                 spoiler.className = 'spoiler';
-                spoilerCheck.type = 'checkbox';
-                spoilerCheck.id = id;
-                spoilerLabel.htmlFor = id;
+                spoilerLabel.className = 'settings-disclosure-heading';
                 spoilerLabel.innerText = command;
                 innerDiv.className = 'box';
-                spoiler.appendChild(spoilerCheck);
                 spoiler.appendChild(spoilerLabel);
                 spoiler.appendChild(innerDiv);
 
@@ -234,19 +228,31 @@ export class GoogMoreBox {
         commands.filter((command) => command.classList.contains('spoiler')).forEach((spoiler) => {
             const description = document.createElement('small');
             description.textContent = 'Quick display and stream options';
-            spoiler.querySelector('label')?.appendChild(description);
+            const summary = spoiler.querySelector('summary');
+            if (summary) {
+                const caption = document.createElement('span');
+                caption.className = 'settings-disclosure-caption';
+                caption.textContent = summary.textContent;
+                caption.appendChild(description);
+                summary.textContent = '';
+                summary.append(GoogMoreBox.createActionIcon('Video'), caption);
+            }
             body.appendChild(spoiler);
         });
 
-        const audioPanel = document.createElement('section');
+        const audioPanel = document.createElement('details');
+        audioPanel.open = true;
         audioPanel.className = 'stream-audio-panel';
-        const audioHeading = document.createElement('div');
-        audioHeading.className = 'stream-audio-heading';
+        const audioHeading = document.createElement('summary');
+        audioHeading.className = 'stream-audio-heading settings-disclosure-heading';
         const audioTitle = document.createElement('h3');
         audioTitle.textContent = 'Audio settings';
         const audioSubtitle = document.createElement('small');
         audioSubtitle.textContent = 'Configure audio playback for this device';
-        audioHeading.append(audioTitle, audioSubtitle);
+        const audioCaption = document.createElement('span');
+        audioCaption.className = 'settings-disclosure-caption';
+        audioCaption.append(audioTitle, audioSubtitle);
+        audioHeading.appendChild(audioCaption);
         const audioColumns = document.createElement('div');
         audioColumns.className = 'stream-audio-columns';
         const audioGeneral = document.createElement('div');
@@ -565,6 +571,7 @@ export class GoogMoreBox {
             'Rotate device': 'M4 9V3m0 0h6M4 3l4 4m12 8v6m0 0h-6m6 0-4-4M9 4h8v16H7V9',
             'Apply audio settings': 'm4 12 5 5L20 6',
             'Disconnect': 'M6 10h12v11H6zM8 10V6a4 4 0 0 1 8 0v4',
+            Video: 'M3 6h12v12H3zM15 10l6-4v12l-6-4',
             Audio: 'M4 9h4l5-5v16l-5-5H4zM16 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14',
         };
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
