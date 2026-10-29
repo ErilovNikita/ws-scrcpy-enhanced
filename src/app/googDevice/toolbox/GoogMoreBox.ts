@@ -23,6 +23,7 @@ export class GoogMoreBox {
     private readonly iFrameIntervalInput?: HTMLInputElement;
     private readonly maxWidthInput?: HTMLInputElement;
     private readonly maxHeightInput?: HTMLInputElement;
+    private readonly videoRanges = new Map<HTMLInputElement, HTMLInputElement>();
 
     constructor(udid: string, private player: BasePlayer, private client: StreamClientScrcpy) {
         const playerName = player.getName();
@@ -163,7 +164,7 @@ export class GoogMoreBox {
 
                 innerDiv.appendChild(btn);
                 const fitButton = document.createElement('button');
-                fitButton.innerText = 'Fit';
+                fitButton.innerText = 'Fit to screen';
                 fitButton.onclick = this.fit;
                 innerDiv.insertBefore(fitButton, innerDiv.firstChild);
                 const resetButton = document.createElement('button');
@@ -176,6 +177,101 @@ export class GoogMoreBox {
                     this.saveVideoSettingsToLocalStorage(udid, playerName, displayId);
                 };
                 innerDiv.appendChild(saveButton);
+                spoiler.classList.add('video-settings-panel');
+                resetButton.className = 'video-reset-button';
+                spoiler.insertBefore(resetButton, innerDiv);
+
+                const fieldDescriptions = new Map<HTMLInputElement, string>([
+                    [maxWidthInput, 'Maximum video width in pixels'],
+                    [maxHeightInput, 'Maximum video height in pixels'],
+                    [bitrateInput, 'Target video bitrate for the stream'],
+                    [maxFpsInput, 'Maximum frames per second'],
+                    [iFrameIntervalInput, 'Interval between key frames'],
+                ]);
+                fieldDescriptions.forEach((description, input) => {
+                    input.type = 'number';
+                    input.min = input === iFrameIntervalInput ? '0' : '1';
+                    input.step = '1';
+                    const row = input.parentElement as HTMLElement;
+                    row.className = 'video-setting-field';
+                    const help = document.createElement('small');
+                    help.textContent = description;
+                    const label = row.querySelector('label');
+                    if (label) {
+                        label.textContent = label.textContent?.replace(/:$/, '') || '';
+                        label.appendChild(help);
+                    }
+                });
+                const display = document.createElement('div');
+                display.className = 'video-display-settings';
+                const displayActions = document.createElement('div');
+                displayActions.className = 'video-display-actions';
+                const displayTitle = document.createElement('strong');
+                displayTitle.textContent = 'Display';
+                const displayHelp = document.createElement('small');
+                displayHelp.textContent = 'Output resolution for the stream';
+                const originalButton = document.createElement('button');
+                originalButton.textContent = 'Original size';
+                originalButton.onclick = () => {
+                    const size = player.getDisplayInfo()?.size;
+                    if (size) {
+                        maxWidthInput.value = size.width.toString();
+                        maxHeightInput.value = size.height.toString();
+                    }
+                };
+                originalButton.disabled = !player.getDisplayInfo();
+                const resolutionButtons = document.createElement('div');
+                resolutionButtons.className = 'video-resolution-buttons';
+                resolutionButtons.append(fitButton, originalButton);
+                displayActions.append(displayTitle, displayHelp, resolutionButtons);
+                display.append(
+                    displayActions,
+                    maxWidthInput.parentElement as HTMLElement,
+                    maxHeightInput.parentElement as HTMLElement,
+                );
+                innerDiv.prepend(display);
+
+                [bitrateInput, maxFpsInput].forEach((input) => {
+                    const row = input.parentElement as HTMLElement;
+                    row.classList.add('video-range-setting');
+                    const controls = document.createElement('div');
+                    controls.className = 'video-range-controls';
+                    const slider = document.createElement('input');
+                    slider.type = 'range';
+                    slider.min = input.min;
+                    slider.max = Math.max(
+                        input === bitrateInput ? 16777216 : 120,
+                        Number(input.value),
+                    ).toString();
+                    slider.step = '1';
+                    slider.value = input.value;
+                    slider.setAttribute('aria-label', input === bitrateInput ? 'Video bitrate' : 'Maximum FPS');
+                    slider.addEventListener('input', () => {
+                        input.value = slider.value;
+                    });
+                    input.addEventListener('input', () => {
+                        if (input.value && input.checkValidity()) {
+                            slider.max = Math.max(Number(slider.max), Number(input.value)).toString();
+                            slider.value = input.value;
+                        }
+                    });
+                    this.videoRanges.set(input, slider);
+                    const numeric = document.createElement('div');
+                    numeric.className = 'video-numeric-value';
+                    numeric.appendChild(input);
+                    if (input === bitrateInput) {
+                        const unit = document.createElement('span');
+                        unit.textContent = 'bps';
+                        numeric.appendChild(unit);
+                    }
+                    controls.append(slider, numeric);
+                    row.appendChild(controls);
+                });
+                iFrameIntervalInput.parentElement?.classList.add('video-interval-setting');
+                const videoActions = document.createElement('div');
+                videoActions.className = 'video-settings-actions';
+                videoActions.append(btn, saveButton);
+                innerDiv.appendChild(videoActions);
                 commands.push(spoiler);
             } else {
                 if (
@@ -512,6 +608,10 @@ export class GoogMoreBox {
                 this.maxHeightInput.value = height.toString();
             }
         }
+        this.videoRanges.forEach((slider, input) => {
+            slider.max = Math.max(Number(slider.max), Number(input.value)).toString();
+            slider.value = input.value;
+        });
     };
 
     private fit = (): void => {
@@ -581,6 +681,10 @@ export class GoogMoreBox {
             'Expand settings': 'M4 6h16M4 12h16M4 18h16M8 3v6m8 0v6m-6 0v6',
             'Collapse panels': 'M4 9V4h5m6 0h5v5M4 15v5h5m6 0h5v-5M8 8l4 4 4-4m-8 8 4-4 4 4',
             'Rotate device': 'M4 9V3m0 0h6M4 3l4 4m12 8v6m0 0h-6m6 0-4-4M9 4h8v16H7V9',
+            Reset: 'M20 7v5h-5m5 0a8 8 0 1 0-2 6',
+            'Fit to screen': 'M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5M3 8l6-6m6 20 6-6',
+            'Original size': 'M3 3h18v18H3zM8 9v6m4-6v6m4-6v6',
+            'Save video settings': 'M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5',
             'Apply audio settings': 'm4 12 5 5L20 6',
             'Disconnect': 'M6 10h12v11H6zM8 10V6a4 4 0 0 1 8 0v4',
             Commands: 'M3 6h18v12H3zM6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M7 15h10',

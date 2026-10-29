@@ -568,3 +568,160 @@ body.stream .scrcpy-settings-dialog .stream-input-panel > .stream-input-section 
     padding: 14px 16px;
     border-top: 1px solid hsl(216, 20%, 88%);
 }
+
+body.stream .scrcpy-settings-dialog .video-settings-panel {
+    position: relative;
+}
+
+body.stream .scrcpy-settings-dialog .video-settings-panel > summary {
+    min-height: 64px;
+    box-sizing: border-box;
+    padding-right: 116px;
+}
+
+body.stream .scrcpy-settings-dialog .video-settings-panel > .video-reset-button {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    min-height: 34px;
+}
+
+body.stream .scrcpy-settings-dialog .video-settings-panel[open] > .box {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 24px;
+    padding: 20px;
+}
+
+body.stream .scrcpy-settings-dialog .video-settings-panel .box > div {
+    display: block;
+    width: 100%;
+}
+
+body.stream .scrcpy-settings-dialog .video-settings-panel .box > .video-display-settings {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) repeat(2, minmax(0, 1fr));
+    align-items: end;
+    gap: 16px;
+}
+
+body.stream .scrcpy-settings-dialog .video-setting-field > label,
+body.stream .scrcpy-settings-dialog .video-display-actions > strong {
+    display: block;
+    margin-bottom: 10px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+body.stream .scrcpy-settings-dialog .video-display-actions > strong {
+    margin-bottom: 2px;
+}
+
+body.stream .scrcpy-settings-dialog .video-setting-field small {
+    margin-top: 2px;
+    font-weight: 400;
+}
+
+body.stream .scrcpy-settings-dialog .video-resolution-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+body.stream .scrcpy-settings-dialog .video-resolution-buttons button {
+    flex: 1 1 auto;
+    padding: 8px;
+    font-size: 12px;
+}
+
+body.stream .scrcpy-settings-dialog .video-setting-field input[type="number"] {
+    width: 100%;
+    height: 36px;
+}
+
+body.stream .scrcpy-settings-dialog .video-range-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 180px;
+    align-items: center;
+    gap: 24px;
+}
+
+body.stream .scrcpy-settings-dialog .video-range-controls input[type="range"] {
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    accent-color: var(--button-text-color);
+    cursor: pointer;
+}
+
+body.stream .scrcpy-settings-dialog .video-numeric-value {
+    display: flex;
+    overflow: hidden;
+    border: 1px solid hsl(216, 20%, 82%);
+    border-radius: 7px;
+    background: white;
+}
+
+body.stream .scrcpy-settings-dialog .video-numeric-value input {
+    min-width: 0;
+    border: 0;
+    border-radius: 0;
+}
+
+body.stream .scrcpy-settings-dialog .video-numeric-value > span {
+    display: grid;
+    place-items: center;
+    padding: 0 10px;
+    border-left: 1px solid hsl(216, 20%, 88%);
+    background: hsl(216, 33%, 97%);
+    color: var(--text-color-light);
+    font-size: 12px;
+}
+
+body.stream .scrcpy-settings-dialog .video-settings-panel .box > .video-interval-setting {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 180px;
+    align-items: center;
+    gap: 24px;
+}
+
+body.stream .scrcpy-settings-dialog .video-interval-setting > label {
+    margin: 0;
+}
+
+body.stream .scrcpy-settings-dialog .video-settings-panel .box > .video-settings-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+body.stream .scrcpy-settings-dialog .video-settings-panel button:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+@media (max-width: 700px) {
+    body.stream .scrcpy-settings-dialog .video-settings-panel[open] > .box {
+        padding: 14px 16px;
+        gap: 18px;
+    }
+
+    body.stream .scrcpy-settings-dialog .video-settings-panel .box > .video-display-settings {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    body.stream .scrcpy-settings-dialog .video-display-actions {
+        grid-column: 1 / -1;
+    }
+
+    body.stream .scrcpy-settings-dialog .video-range-controls,
+    body.stream .scrcpy-settings-dialog .video-settings-panel .box > .video-interval-setting {
+        grid-template-columns: minmax(0, 1fr) 132px;
+        gap: 12px;
+    }
+}
