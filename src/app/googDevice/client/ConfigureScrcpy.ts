@@ -98,12 +98,16 @@ export class ConfigureScrcpy extends BaseClient<ParamsStreamScrcpy, ConfigureScr
         if (!this.connectionStatusElement) {
             return;
         }
-        let text = this.statusText;
-        if (this.connectionCount) {
-            text = `${text}. Other clients: ${this.connectionCount}.`;
-        }
-        this.connectionStatusElement.innerText = text;
-        this.connectionStatusElement.classList.toggle('ready', this.statusText === 'Ready');
+        const online = this.statusText === 'Ready' || this.statusText === 'Waiting for info...';
+        this.connectionStatusElement.textContent = online
+            ? 'Online'
+            : this.statusText === 'Disconnected'
+            ? 'Offline'
+            : 'Connecting...';
+        this.connectionStatusElement.classList.toggle('online', online);
+        this.connectionStatusElement.title = this.connectionCount
+            ? `${this.statusText}. Other clients: ${this.connectionCount}.`
+            : this.statusText;
     }
 
     private onEncoders = (encoders: string[]): void => {
@@ -278,15 +282,12 @@ export class ConfigureScrcpy extends BaseClient<ParamsStreamScrcpy, ConfigureScr
             return;
         }
         heightInput.disabled = widthInput.disabled = checked;
-        heightInput.hidden = widthInput.hidden = false;
-        const heightLabel = document.getElementById(`label_maxHeight_${this.escapedUdid}`);
-        const widthLabel = document.getElementById(`label_maxWidth_${this.escapedUdid}`);
-        if (heightLabel) {
-            heightLabel.hidden = false;
-        }
-        if (widthLabel) {
-            widthLabel.hidden = false;
-        }
+        [heightInput, widthInput].forEach((input) => {
+            const row = input.closest<HTMLElement>('.stream-setting-row');
+            if (row) {
+                row.hidden = checked;
+            }
+        });
         if (checked) {
             if (heightInput.value) {
                 heightInput.setAttribute(Attribute.VALUE, heightInput.value);
@@ -466,23 +467,20 @@ export class ConfigureScrcpy extends BaseClient<ParamsStreamScrcpy, ConfigureScr
         [
             `Android ${this.descriptor['ro.build.version.release']}`,
             `SDK ${this.descriptor['ro.build.version.sdk']}`,
-            this.descriptor.state === 'device' ? 'Online' : 'Offline',
-        ].forEach((text, index) => {
+        ].forEach((text) => {
             const badge = document.createElement('span');
             badge.textContent = text;
-            if (index === 2 && this.descriptor.state === 'device') {
-                badge.className = 'online';
-            }
             metadata.appendChild(badge);
         });
         heading.append(deviceName, metadata);
         dialogHeader.appendChild(heading);
         const statusElement = document.createElement('span');
-        statusElement.classList.add('configure-status');
+        statusElement.setAttribute('role', 'status');
+        statusElement.setAttribute('aria-live', 'polite');
         this.connectionStatusElement = statusElement;
         this.statusText = 'Connecting...';
         this.updateStatus();
-        dialogHeader.appendChild(statusElement);
+        metadata.appendChild(statusElement);
 
         const okButton = (this.okButton = document.createElement('button'));
         okButton.classList.add('configure-open-button');
