@@ -20,6 +20,7 @@ import UploadSVG from '../../public/images/iconfont/upload.svg';
 
 import ConnectionSVG from '../../public/images/buttons/connection.svg';
 import ServerSVG from '../../public/images/buttons/server.svg';
+import DeviceListSVG from '../../public/images/buttons/device-list.svg';
 
 export enum Icon {
     BACK,
@@ -43,6 +44,7 @@ export enum Icon {
     UPLOAD,
     CONNECTION,
     SERVER,
+    DEVICE_LIST,
 }
 
 export default class SvgImage {
@@ -87,6 +89,8 @@ export default class SvgImage {
                 return FullscreenSVG;
             case Icon.CONNECTION:
                 return ConnectionSVG;
+            case Icon.DEVICE_LIST:
+                return DeviceListSVG;
             case Icon.SERVER:
                 return ServerSVG;
             case Icon.UPLOAD:

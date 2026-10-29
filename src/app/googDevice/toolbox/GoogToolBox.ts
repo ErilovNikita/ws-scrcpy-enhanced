@@ -129,6 +129,16 @@ export class GoogToolBox extends ToolBox {
             elements.unshift(more);
         }
 
+        const deviceList = new ToolBoxButton('All devices', SvgImage.Icon.DEVICE_LIST);
+        deviceList.getElement().type = 'button';
+        deviceList.getElement().setAttribute('aria-label', 'Back to all devices');
+        deviceList.addEventListener('click', () => {
+            // Routing is initialized on load, so clearing the stream hash needs a reload.
+            window.location.hash = '';
+            window.location.reload();
+        });
+        elements.unshift(deviceList);
+
         const toggleSidebar = new ToolBoxCheckbox(
             'Toggle Sidebar',
             SvgImage.Icon.MENU,
