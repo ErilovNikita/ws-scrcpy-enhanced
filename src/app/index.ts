@@ -3,6 +3,9 @@ import { StreamClientScrcpy } from './googDevice/client/StreamClientScrcpy';
 import { StreamClientWebRTC } from './googDevice/client/StreamClientWebRTC';
 import { HostTracker } from './client/HostTracker';
 import { Tool } from './client/Tool';
+import { installHashNavigation } from './navigation';
+
+installHashNavigation();
 
 window.onload = async function (): Promise<void> {
     const hash = location.hash.replace(/^#!/, '');
