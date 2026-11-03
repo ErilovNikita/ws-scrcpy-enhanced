@@ -72,13 +72,13 @@ export class FileListing extends Mw {
     private static async handle(cmd: string, serial: string, pathString: string, channel: Multiplexer): Promise<void> {
         try {
             if (cmd === Protocol.STAT) {
-                return AdbUtils.pipeStatToStream(serial, pathString, channel);
+                return await AdbUtils.pipeStatToStream(serial, pathString, channel);
             }
             if (cmd === Protocol.LIST) {
-                return AdbUtils.pipeReadDirToStream(serial, pathString, channel);
+                return await AdbUtils.pipeReadDirToStream(serial, pathString, channel);
             }
             if (cmd === Protocol.RECV) {
-                return AdbUtils.pipePullFileToStream(serial, pathString, channel);
+                return await AdbUtils.pipePullFileToStream(serial, pathString, channel);
             }
         } catch (error: any) {
             FileListing.sendError(error?.message, channel);

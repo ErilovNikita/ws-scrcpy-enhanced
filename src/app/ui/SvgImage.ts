@@ -1,3 +1,7 @@
+import TerminalSVG from '../../public/images/buttons/terminal.svg';
+import DevelopmentSVG from '../../public/images/buttons/development.svg';
+import FolderSVG from '../../public/images/buttons/folder.svg';
+import FileSVG from '../../public/images/buttons/file.svg';
 import AddDeviceSVG from '../../public/images/buttons/add-device.svg';
 import OpenDevicesSVG from '../../public/images/buttons/open-devices.svg';
 import KeyboardSVG from '../../public/images/skin-light/ic_keyboard_678_48dp.svg';
@@ -51,12 +55,24 @@ export enum Icon {
     CHEVRON_RIGHT,
     ADD_DEVICE,
     OPEN_DEVICES,
+    FOLDER,
+    FILE,
+    TERMINAL,
+    DEVELOPMENT,
 }
 
 export default class SvgImage {
     static Icon = Icon;
     private static getSvgString(type: Icon): string {
         switch (type) {
+            case Icon.TERMINAL:
+                return TerminalSVG;
+            case Icon.DEVELOPMENT:
+                return DevelopmentSVG;
+            case Icon.FOLDER:
+                return FolderSVG;
+            case Icon.FILE:
+                return FileSVG;
             case Icon.ADD_DEVICE:
                 return AddDeviceSVG;
             case Icon.OPEN_DEVICES:

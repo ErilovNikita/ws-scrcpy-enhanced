@@ -1,3 +1,4 @@
+import { DeviceFileBrowser } from './DeviceFileBrowser';
 import '../../../style/filelisting.css';
 import { ParamsFileListing } from '../../../types/ParamsFileListing';
 import { ManagerClient } from '../../client/ManagerClient';
@@ -68,17 +69,21 @@ export class FileListingClient extends ManagerClient<ParamsFileListing, never> i
         }
         const entry = document.createElement('div');
         entry.classList.add('file-listing', blockClass);
-        entry.appendChild(
-            BaseDeviceTracker.buildLink(
-                {
-                    action: ACTION.FILE_LISTING,
-                    udid: descriptor.udid,
-                    path: `${tempPath}/`,
-                },
-                'list files',
-                params,
-            ),
+        const link = BaseDeviceTracker.buildLink(
+            { action: ACTION.FILE_LISTING, udid: descriptor.udid, path: `${tempPath}/` },
+            'Files',
+            params,
         );
+        link.onclick = (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            DeviceFileBrowser.open(
+                descriptor.udid,
+                `${descriptor['ro.product.manufacturer']} ${descriptor['ro.product.model']}`.trim(),
+                params,
+            );
+        };
+        entry.appendChild(link);
         return entry;
     }
 

@@ -70,9 +70,9 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
         a.setAttribute('target', '_blank');
         a.classList.add(`link-${q.action}`);
         const iconByAction: Record<string, Icon> = {
-            [ACTION.SHELL]: Icon.KEYBOARD,
-            [ACTION.DEVTOOLS]: Icon.SETTINGS,
-            [ACTION.FILE_LISTING]: Icon.UPLOAD,
+            [ACTION.SHELL]: Icon.TERMINAL,
+            [ACTION.DEVTOOLS]: Icon.DEVELOPMENT,
+            [ACTION.FILE_LISTING]: Icon.FOLDER,
             [ACTION.STREAM_SCRCPY]: Icon.FULLSCREEN,
             [ACTION.STREAM_WEBRTC]: Icon.FULLSCREEN,
             [ACTION.STREAM_WS_QVH]: Icon.FULLSCREEN,
@@ -229,8 +229,8 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
             if (entry.querySelector('a') && !entry.hasAttribute(BaseDeviceTracker.AttributePlayerCodeName)) {
                 const labels: Record<string, string> = {
                     'link-shell': 'Shell',
-                    'link-devtools': 'DevTools',
-                    'link-list-files': 'List files',
+                    'link-devtools': 'Development Tools',
+                    'link-list-files': 'Files',
                 };
                 const link = entry.querySelector('a');
                 const label = link?.querySelector('span');

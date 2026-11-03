@@ -122,18 +122,58 @@ export class AdbUtils {
     public static async pipePullFileToStream(serial: string, pathString: string, stream: Multiplexer): Promise<void> {
         const client = AdbExtended.createClient();
         const transfer = await client.pull(serial, pathString);
-        transfer.on('data', (data) => {
-            stream.send(Buffer.concat([Buffer.from(Protocol.DATA, 'ascii'), data]));
-        });
         return new Promise((resolve, reject) => {
-            transfer.on('end', function () {
-                stream.send(Buffer.from(Protocol.DONE, 'ascii'));
-                stream.close();
+            let finished = false;
+            const cleanup = (): void => {
+                transfer.removeListener('data', onData);
+                transfer.removeListener('end', onEnd);
+                // Late transport errors can arrive after a cancelled pull.
+                stream.removeEventListener('close', onClose);
+            };
+            const onClose = (): void => {
+                if (finished) return;
+                finished = true;
+                cleanup();
+                transfer.destroy();
                 resolve();
-            });
-            transfer.on('error', (e) => {
-                reject(e);
-            });
+            };
+            const onError = (error: Error): void => {
+                if (finished) return;
+                finished = true;
+                cleanup();
+                transfer.destroy();
+                reject(error);
+            };
+            const onData = (data: Buffer): void => {
+                if (stream.readyState !== stream.OPEN) {
+                    onClose();
+                    return;
+                }
+                try {
+                    stream.send(Buffer.concat([Buffer.from(Protocol.DATA, 'ascii'), data]));
+                } catch (error) {
+                    onError(error instanceof Error ? error : new Error(String(error)));
+                }
+            };
+            const onEnd = (): void => {
+                if (finished) return;
+                finished = true;
+                cleanup();
+                try {
+                    if (stream.readyState === stream.OPEN) {
+                        stream.send(Buffer.from(Protocol.DONE, 'ascii'));
+                        stream.close();
+                    }
+                    resolve();
+                } catch (error) {
+                    reject(error);
+                }
+            };
+            transfer.on('data', onData);
+            transfer.on('end', onEnd);
+            transfer.on('error', onError);
+            stream.addEventListener('close', onClose);
+            if (stream.readyState !== stream.OPEN) onClose();
         });
     }
 
