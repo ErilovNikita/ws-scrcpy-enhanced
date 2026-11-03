@@ -12,9 +12,6 @@ type WrtcModule = {
     RTCPeerConnection: new () => RTCPeerConnection;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const wrtc: WrtcModule = require('wrtc');
-
 export class WebRtcScrcpyProxy extends Mw {
     public static readonly TAG = 'WebRtcScrcpyProxy';
     private static readonly VIDEO_BUFFER_HIGH_WATER_MARK = 1024 * 1024;
@@ -43,6 +40,9 @@ export class WebRtcScrcpyProxy extends Mw {
         super(ws);
         this.udid = udid;
         this.remoteUrl = remoteUrl;
+        // Load the optional native module only when a WebRTC stream is requested.
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const wrtc: WrtcModule = require('wrtc');
         this.peer = new wrtc.RTCPeerConnection();
         this.videoChannel = this.peer.createDataChannel('video', {
             ordered: false,

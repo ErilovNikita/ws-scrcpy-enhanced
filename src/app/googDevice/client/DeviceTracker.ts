@@ -1,3 +1,4 @@
+import { createDeviceStatus } from './DeviceStatus';
 import '../../../style/devicelist.css';
 import { BaseDeviceTracker } from '../../client/BaseDeviceTracker';
 import { SERVER_PORT } from '../../../common/Constants';
@@ -226,7 +227,11 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
                     <img class="device-platform-icon" src="${AndroidLogoPNG}" alt="" />
                 </div>
                 <div class="device-details">
-                    <div class="device-name">${device['ro.product.manufacturer']} ${device['ro.product.model']}</div>
+                    <div class="device-name-row">
+                        <div class="device-name">
+                            ${device['ro.product.manufacturer']} ${device['ro.product.model']}
+                        </div>
+                    </div>
                     <div class="device-version-tags">
                         <span class="release-version">Android ${device['ro.build.version.release']}</span>
                         <span class="device-metadata-separator" aria-hidden="true">·</span>
@@ -238,6 +243,7 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
             </div>
             <div id="${servicesId}" class="services"></div>
         </div>`.content;
+        row.querySelector('.device-name-row')?.appendChild(createDeviceStatus(isActive ? device.status : undefined));
         const services = row.getElementById(servicesId);
         if (!services) {
             return;

@@ -152,6 +152,7 @@ export class ControlCenter extends BaseControlCenter<GoogDeviceDescriptor> imple
     }
 
     public release(): void {
+        this.deviceMap.forEach((device) => device.stopStatusUpdates());
         this.stopTracker();
     }
 

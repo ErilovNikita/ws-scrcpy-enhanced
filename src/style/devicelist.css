@@ -1072,3 +1072,51 @@ body.list #devices .device-header-list .device-open-hint > svg {
         display: none;
     }
 }
+
+body.list #devices .device-name-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 8px;
+    min-width: 0;
+}
+
+body.list #devices .device-name-row .device-name {
+    flex: 0 1 auto;
+}
+
+body.list #devices .device-status-icons {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--device-muted-color);
+    flex-shrink: 0;
+}
+
+body.list #devices .device-status-icon {
+    display: inline-flex;
+    width: 18px;
+    height: 18px;
+}
+
+body.list #devices .device-status-icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+body.list #devices .device-status-icon.is-low {
+    color: #e05252;
+}
+
+body.list #devices .device-status-icon.is-charging {
+    color: #38a875;
+}
+
+body.list #devices .device-status-icon.is-unknown {
+    opacity: 0.45;
+}
+
+body.list #devices .device-status-charging {
+    width: 11px;
+    margin-left: -5px;
+}

@@ -1,3 +1,4 @@
+import { parseAndroidStatus } from '../../common/AndroidStatus';
 import { AdbExtended } from './adb';
 import AdbKitClient from '@dead50f7/adbkit/lib/adb/client';
 import PushTransfer from '@dead50f7/adbkit/lib/adb/sync/pushtransfer';
@@ -25,6 +26,8 @@ export class Device extends TypedEmitter<DeviceEvents> {
     private static readonly INITIAL_UPDATE_TIMEOUT = 1500;
     private static readonly MAX_UPDATES_COUNT = 7;
     private connected = true;
+    private statusTimeoutId?: Timeout;
+    private statusGeneration = 0;
     private pidDetectionVariant: PID_DETECTION = PID_DETECTION.UNKNOWN;
     private client: AdbKitClient;
     private properties?: Record<string, string>;
@@ -58,6 +61,12 @@ export class Device extends TypedEmitter<DeviceEvents> {
     }
 
     public setState(state: string): void {
+        const generation = ++this.statusGeneration;
+        if (this.statusTimeoutId) {
+            clearTimeout(this.statusTimeoutId);
+            this.statusTimeoutId = undefined;
+        }
+        delete this.descriptor.status;
         if (state === 'device') {
             this.connected = true;
             this.properties = undefined;
@@ -67,6 +76,43 @@ export class Device extends TypedEmitter<DeviceEvents> {
         this.descriptor.state = state;
         this.emitUpdate();
         this.fetchDeviceInfo();
+        if (this.connected) {
+            void this.pollStatus(generation);
+        }
+    }
+
+    private async pollStatus(generation: number): Promise<void> {
+        try {
+            const read = (command: string): Promise<string> => this.runShellCommandAdbKit(command).catch(() => '');
+            const [battery, wifi, airplane] = await Promise.all([
+                read('dumpsys battery'),
+                read('cmd wifi status; dumpsys wifi | grep -E "mWifiInfo|mWifiState|Wi-Fi is"'),
+                read('settings get global airplane_mode_on'),
+            ]);
+            if (generation !== this.statusGeneration || !this.connected) {
+                return;
+            }
+            const status = parseAndroidStatus(battery, wifi, airplane);
+            if (JSON.stringify(status) !== JSON.stringify(this.descriptor.status)) {
+                this.descriptor.status = status;
+                this.emitUpdate();
+            }
+        } finally {
+            if (generation === this.statusGeneration && this.connected) {
+                this.statusTimeoutId = setTimeout(() => {
+                    this.statusTimeoutId = undefined;
+                    void this.pollStatus(generation);
+                }, 15000);
+            }
+        }
+    }
+
+    public stopStatusUpdates(): void {
+        ++this.statusGeneration;
+        if (this.statusTimeoutId) {
+            clearTimeout(this.statusTimeoutId);
+            this.statusTimeoutId = undefined;
+        }
     }
 
     public isConnected(): boolean {
