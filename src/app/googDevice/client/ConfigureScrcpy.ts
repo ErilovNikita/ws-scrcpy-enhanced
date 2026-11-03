@@ -1,3 +1,4 @@
+import '../../../style/modal.css';
 import '../../../style/dialog.css';
 import GoogDeviceDescriptor from '../../../types/GoogDeviceDescriptor';
 import { DisplayCombinedInfo } from '../../client/StreamReceiver';
@@ -6,7 +7,6 @@ import { StreamClientScrcpy } from './StreamClientScrcpy';
 import Size from '../../Size';
 import Util from '../../Util';
 import { DisplayInfo } from '../../DisplayInfo';
-import { ToolBoxButton } from '../../toolbox/ToolBoxButton';
 import SvgImage from '../../ui/SvgImage';
 import { PlayerClass } from '../../player/BasePlayer';
 import { ToolBoxCheckbox } from '../../toolbox/ToolBoxCheckbox';
@@ -441,21 +441,12 @@ export class ConfigureScrcpy extends BaseClient<ParamsStreamScrcpy, ConfigureScr
         const background = document.createElement('div');
         background.classList.add('dialog-background', dialogName);
         const dialogContainer = (this.dialogContainer = document.createElement('div'));
-        dialogContainer.classList.add('dialog-container', dialogName);
+        dialogContainer.classList.add('dialog-container', dialogName, 'app-modal');
         dialogContainer.setAttribute('role', 'dialog');
         dialogContainer.setAttribute('aria-modal', 'true');
         dialogContainer.setAttribute('aria-labelledby', `configure_title_${this.escapedUdid}`);
         const dialogHeader = document.createElement('div');
         dialogHeader.classList.add('dialog-header', dialogName, 'control-wrapper');
-        const backButton = new ToolBoxButton('Back', SvgImage.Icon.ARROW_BACK);
-
-        backButton.addEventListener('click', () => {
-            this.cancel();
-        });
-        backButton.getAllElements().forEach((el) => {
-            dialogHeader.appendChild(el);
-        });
-
         const deviceName = document.createElement('span');
         deviceName.classList.add('dialog-title', 'main-title');
         deviceName.innerText = this.deviceName;
@@ -473,7 +464,6 @@ export class ConfigureScrcpy extends BaseClient<ParamsStreamScrcpy, ConfigureScr
             metadata.appendChild(badge);
         });
         heading.append(deviceName, metadata);
-        dialogHeader.appendChild(heading);
         const statusElement = document.createElement('span');
         statusElement.setAttribute('role', 'status');
         statusElement.setAttribute('aria-live', 'polite');
@@ -492,14 +482,20 @@ export class ConfigureScrcpy extends BaseClient<ParamsStreamScrcpy, ConfigureScr
         okButton.disabled = true;
         okButton.addEventListener('click', this.openStream);
         okButton.classList.add('settings-action-button');
-        dialogHeader.appendChild(okButton);
         const closeButton = document.createElement('button');
         closeButton.className = 'configure-close';
         closeButton.type = 'button';
         closeButton.textContent = '×';
         closeButton.setAttribute('aria-label', 'Close stream settings');
         closeButton.addEventListener('click', this.cancel);
-        dialogHeader.appendChild(closeButton);
+        const topRow = document.createElement('div');
+        topRow.className = 'app-modal-top-row';
+        const symbol = document.createElement('span');
+        symbol.className = 'app-modal-symbol';
+        symbol.setAttribute('aria-hidden', 'true');
+        symbol.appendChild(SvgImage.create(SvgImage.Icon.SETTINGS));
+        topRow.append(symbol, closeButton);
+        dialogHeader.append(topRow, heading);
 
         const dialogBody = (this.dialogBody = document.createElement('div'));
         dialogBody.classList.add('dialog-body', blockClass, dialogName, 'hidden');
@@ -621,9 +617,7 @@ export class ConfigureScrcpy extends BaseClient<ParamsStreamScrcpy, ConfigureScr
                 if (!(element instanceof HTMLLabelElement)) {
                     return;
                 }
-                const input = group.querySelector<HTMLInputElement | HTMLSelectElement>(
-                    `[id="${element.htmlFor}"]`,
-                );
+                const input = group.querySelector<HTMLInputElement | HTMLSelectElement>(`[id="${element.htmlFor}"]`);
                 if (!input) {
                     return;
                 }
@@ -713,7 +707,7 @@ export class ConfigureScrcpy extends BaseClient<ParamsStreamScrcpy, ConfigureScr
         saveLabel.innerText = 'Save settings';
         saveSettingsButton.appendChild(saveLabel);
         saveSettingsButton.addEventListener('click', this.saveSettings);
-        buttonsWrapper.appendChild(saveSettingsButton);
+        buttonsWrapper.append(saveSettingsButton, okButton);
 
         const dialogFooter = document.createElement('div');
         dialogFooter.classList.add('dialog-footer', blockClass, dialogName);

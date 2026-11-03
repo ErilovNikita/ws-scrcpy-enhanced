@@ -718,3 +718,132 @@ body.list .stream-setting-field > .input:disabled {
     color: var(--device-muted-color);
     cursor: not-allowed;
 }
+
+/* Shared modal style: the add-device form is the visual reference. */
+body.list .dialog-background.configureDialog {
+    background: rgb(20 35 55 / 38%);
+    backdrop-filter: blur(4px);
+}
+
+body.list .dialog-container.configureDialog.app-modal {
+    width: min(720px, 100%);
+    max-width: 720px;
+    max-height: calc(100vh - 48px);
+    padding: 28px;
+    border-radius: 20px;
+    box-shadow: var(--modal-shadow);
+    color: var(--modal-text);
+    font-size: 13px;
+}
+
+body.list .dialog-header.configureDialog {
+    display: block;
+    min-height: 0;
+    padding: 0 0 24px;
+    border: 0;
+    overflow: visible;
+}
+
+body.list .dialog-header.configureDialog span.dialog-title {
+    margin: 0 0 8px;
+    font-size: 22px;
+    font-weight: 650;
+    letter-spacing: -0.025em;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+body.list .dialog-header.configureDialog .configure-close {
+    display: grid;
+    place-items: center;
+    margin: 0;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--modal-muted);
+    font-size: 24px;
+    font-weight: 400;
+}
+
+body.list .dialog-header.configureDialog .configure-close:hover {
+    background: var(--modal-tint);
+}
+
+body.list .configure-metadata {
+    margin: 0;
+    gap: 8px;
+}
+
+body.list .configure-metadata > span {
+    border-radius: 999px;
+}
+
+body.list .configure-metadata > .online {
+    background: #edf9f1;
+    color: #217448;
+}
+
+body.list .dialog-body.configureDialog {
+    padding: 0 3px 3px;
+}
+
+body.list .dialog-body.configureDialog .input {
+    border-radius: 9px;
+    font-family: inherit;
+}
+
+body.list .stream-settings-table {
+    border-radius: 12px;
+}
+
+body.list .stream-settings-intro h2 {
+    font-size: 16px;
+}
+
+body.list .stream-settings-intro p {
+    line-height: 1.6;
+}
+
+body.list .dialog-footer.configureDialog {
+    min-height: 0;
+    margin-top: 24px;
+    padding: 0;
+    border: 0;
+    background: var(--modal-surface);
+    overflow: visible;
+}
+
+body.list .dialog-footer.configureDialog .settings-action-button {
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--modal-text);
+}
+
+body.list .dialog-footer.configureDialog .configure-open-button {
+    border-color: var(--modal-accent);
+    background: var(--modal-accent);
+    color: white;
+}
+
+body.list .dialog-footer.configureDialog .settings-save-button {
+    border-color: var(--modal-border);
+    background: var(--modal-surface);
+    color: var(--modal-text);
+}
+
+body.list .dialog-footer.configureDialog .settings-save-button:hover {
+    background: var(--modal-tint);
+    color: var(--modal-accent);
+}
+
+body.list .dialog-footer.configureDialog .configure-open-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+    body.list .dialog-container.configureDialog.app-modal {
+        padding: 24px 20px;
+    }
+}

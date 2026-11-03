@@ -1,0 +1,174 @@
+:root {
+    --modal-surface: #fff;
+    --modal-text: hsl(215, 28%, 18%);
+    --modal-muted: hsl(215, 14%, 48%);
+    --modal-border: hsl(216, 20%, 88%);
+    --modal-accent: hsl(207, 87%, 48%);
+    --modal-tint: hsl(210, 60%, 97%);
+    --modal-shadow: 0 24px 80px rgb(20 35 55 / 20%);
+}
+
+.app-modal {
+    color-scheme: light;
+    font-family: "Segoe UI", "Segoe UI Variable", system-ui, sans-serif;
+}
+
+.app-modal-top-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.app-modal-symbol {
+    display: grid;
+    place-items: center;
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    border-radius: 13px;
+    background: var(--modal-tint);
+    color: var(--modal-accent);
+}
+
+.app-modal-symbol svg {
+    width: 25px;
+    height: 25px;
+    fill: currentColor;
+}
+
+.app-modal-symbol.is-error {
+    background: #fff0f1;
+    color: #a82d36;
+}
+
+.app-message-dialog {
+    box-sizing: border-box;
+    width: min(480px, calc(100vw - 32px));
+    max-height: calc(100vh - 48px);
+    padding: 28px;
+    overflow: auto;
+    border: 1px solid var(--modal-border);
+    border-radius: 20px;
+    background: var(--modal-surface);
+    color: var(--modal-text);
+    box-shadow: var(--modal-shadow);
+}
+
+.app-message-dialog::backdrop {
+    background: rgb(20 35 55 / 38%);
+    backdrop-filter: blur(4px);
+}
+
+.app-message-dialog h2 {
+    margin: 0 0 8px;
+    font-size: 22px;
+    font-weight: 650;
+    letter-spacing: -0.025em;
+}
+
+.app-message-dialog p {
+    margin: 0;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+    color: var(--modal-muted);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.app-message-dialog label {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 24px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.app-message-dialog input {
+    box-sizing: border-box;
+    width: 100%;
+    height: 42px;
+    padding: 10px 12px;
+    border: 1px solid var(--modal-border);
+    border-radius: 9px;
+    background: var(--modal-surface);
+    color: var(--modal-text);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 400;
+}
+
+.app-message-dialog .app-modal-error {
+    margin-top: 12px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: #fff0f1;
+    color: #a82d36;
+}
+
+.app-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 24px;
+}
+
+.app-message-dialog button {
+    min-height: 36px;
+    padding: 7px 14px;
+    border: 1px solid var(--modal-border);
+    border-radius: 999px;
+    background: var(--modal-surface);
+    color: var(--modal-text);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.app-message-dialog button:hover {
+    background: var(--modal-tint);
+}
+
+.app-message-dialog button.app-modal-primary {
+    border-color: var(--modal-accent);
+    background: var(--modal-accent);
+    color: white;
+}
+
+.app-message-dialog button.app-modal-primary:hover {
+    background: hsl(207, 87%, 42%);
+}
+
+.app-message-dialog button.app-modal-close {
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--modal-muted);
+    font-size: 24px;
+    font-weight: 400;
+}
+
+.app-message-dialog button.app-modal-close:hover {
+    background: var(--modal-tint);
+}
+
+.app-modal button:focus-visible,
+.app-modal input:focus-visible,
+.app-modal select:focus-visible,
+.app-modal textarea:focus-visible {
+    outline: 2px solid var(--modal-accent);
+    outline-offset: 3px;
+}
+
+@media (max-width: 600px) {
+    .app-message-dialog {
+        padding: 24px 20px;
+    }
+}

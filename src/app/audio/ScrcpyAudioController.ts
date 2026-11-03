@@ -1,3 +1,4 @@
+import { showNotice } from '../ui/Modal';
 import { ACTION } from '../../common/Action';
 import { ParamsStreamScrcpy } from '../../types/ParamsStreamScrcpy';
 import Util from '../Util';
@@ -36,7 +37,8 @@ function normalizeAudioOptions(options?: Partial<ScrcpyAudioOptions>): ScrcpyAud
     const channelsRaw = options?.channels;
     const channels: 1 | 2 | undefined = channelsRaw === 1 || channelsRaw === 2 ? channelsRaw : undefined;
     const bitrateRaw = options?.bitrate;
-    const bitrate = typeof bitrateRaw === 'number' && isFinite(bitrateRaw) && bitrateRaw > 0 ? Math.round(bitrateRaw) : undefined;
+    const bitrate =
+        typeof bitrateRaw === 'number' && isFinite(bitrateRaw) && bitrateRaw > 0 ? Math.round(bitrateRaw) : undefined;
     return { frameMode, channels, bitrate };
 }
 
@@ -63,9 +65,9 @@ function readI64BE(data: Uint8Array, offset: number): number {
     if (hi >= 0) {
         return hi * 4294967296 + lo;
     }
-    const hiU = (~hi) >>> 0;
-    const loU = (~lo) >>> 0;
-    return -((hiU * 4294967296 + loU) + 1);
+    const hiU = ~hi >>> 0;
+    const loU = ~lo >>> 0;
+    return -(hiU * 4294967296 + loU + 1);
 }
 
 function buildAudioDirectUrl(streamWsUrl: string, options: ScrcpyAudioOptions): string {
@@ -213,9 +215,7 @@ function convertInterleavedFloat32(
     const safeOutChannels = outChannels === 2 ? 2 : 1;
     const inFrames = Math.floor(input.length / safeInChannels);
     const outFrames =
-        inSampleRate === outSampleRate
-            ? inFrames
-            : Math.max(1, Math.round((inFrames * outSampleRate) / inSampleRate));
+        inSampleRate === outSampleRate ? inFrames : Math.max(1, Math.round((inFrames * outSampleRate) / inSampleRate));
     const output = new Float32Array(outFrames * safeOutChannels);
     const rateRatio = inSampleRate / outSampleRate;
 
@@ -442,7 +442,11 @@ registerProcessor('ws-scrcpy-pcm-player', WsScrcpyPcmPlayerProcessor);
 
 export class ScrcpyAudioController {
     public static isSupported(): boolean {
-        return typeof AudioContext === 'function' && typeof AudioDecoder === 'function' && typeof EncodedAudioChunk === 'function';
+        return (
+            typeof AudioContext === 'function' &&
+            typeof AudioDecoder === 'function' &&
+            typeof EncodedAudioChunk === 'function'
+        );
     }
 
     private ws?: WebSocket;
@@ -453,7 +457,11 @@ export class ScrcpyAudioController {
     private reconnectAttempt = 0;
     private reconnectTimer?: number;
     private reconnectBound = false;
-    private options: ScrcpyAudioOptions = normalizeAudioOptions({ frameMode: 'combined', channels: 1, bitrate: 64_000 });
+    private options: ScrcpyAudioOptions = normalizeAudioOptions({
+        frameMode: 'combined',
+        channels: 1,
+        bitrate: 64_000,
+    });
     private sessionId = 0;
     private state: 'initial' | 'meta' | 'packet' = 'initial';
     private pendingPtsUs = 0;
@@ -767,7 +775,7 @@ export class ScrcpyAudioController {
     }
 
     private showFinlinkErrorPrompt(info: { error: string; message: string; retryable: boolean }): void {
-        if (typeof window === 'undefined' || typeof window.alert !== 'function') {
+        if (typeof document === 'undefined') {
             return;
         }
         const key = `${info.error}::${info.message}::${info.retryable ? 1 : 0}`;
@@ -776,7 +784,7 @@ export class ScrcpyAudioController {
         }
         this.lastPromptedFinlinkErrorKey = key;
         try {
-            window.alert(info.message || info.error);
+            showNotice('Ошибка аудиопотока', info.message || info.error);
         } catch {}
     }
 
@@ -1029,28 +1037,30 @@ export class ScrcpyAudioController {
             description: this.audioConfig,
         };
         if (typeof AudioDecoder.isConfigSupported === 'function') {
-            AudioDecoder.isConfigSupported(config).then((result) => {
-                if (sid !== this.sessionId) {
-                    return;
-                }
-                if (!result.supported) {
-                    console.error(
-                        '[ScrcpyAudioController] Browser does not support the received AAC audio configuration',
-                        config,
-                    );
+            AudioDecoder.isConfigSupported(config)
+                .then((result) => {
+                    if (sid !== this.sessionId) {
+                        return;
+                    }
+                    if (!result.supported) {
+                        console.error(
+                            '[ScrcpyAudioController] Browser does not support the received AAC audio configuration',
+                            config,
+                        );
+                        this.setStatus('Error');
+                        this.stop();
+                        return;
+                    }
+                    this.configureDecoder(config);
+                })
+                .catch((_e: unknown) => {
+                    if (sid !== this.sessionId) {
+                        return;
+                    }
+                    console.error('[ScrcpyAudioController] Failed to validate audio decoder configuration', _e);
                     this.setStatus('Error');
                     this.stop();
-                    return;
-                }
-                this.configureDecoder(config);
-            }).catch((_e: unknown) => {
-                if (sid !== this.sessionId) {
-                    return;
-                }
-                console.error('[ScrcpyAudioController] Failed to validate audio decoder configuration', _e);
-                this.setStatus('Error');
-                this.stop();
-            });
+                });
             return;
         }
         this.configureDecoder(config);

@@ -22,7 +22,7 @@ export interface DragAndPushListener {
 }
 
 export type FilePushHandlerOptions = {
-    resolveDestinationDir?: (files: File[]) => string | undefined;
+    resolveDestinationDir?: (files: File[]) => string | null | undefined | Promise<string | null | undefined>;
 };
 
 const TAG = '[FilePushHandler]';
@@ -116,11 +116,7 @@ export default class FilePushHandler implements DragEventListener {
                 continue;
             }
 
-            for (
-                let offset = 0;
-                offset < value.byteLength;
-                offset += FilePushHandler.MAX_APPEND_CHUNK_BYTES
-            ) {
+            for (let offset = 0; offset < value.byteLength; offset += FilePushHandler.MAX_APPEND_CHUNK_BYTES) {
                 const chunk = value.subarray(offset, offset + FilePushHandler.MAX_APPEND_CHUNK_BYTES);
                 this.filePushStream.sendEventAppend({ id: pushId, chunk });
                 const { code: appendResponseCode } = await this.waitForResponse(pushId);
@@ -204,39 +200,29 @@ export default class FilePushHandler implements DragEventListener {
         this.listeners.forEach((listener) => {
             listener.onDrop();
         });
-        const destinationDir = this.options.resolveDestinationDir ? this.options.resolveDestinationDir(files) : undefined;
-        files.forEach((file: File) => {
-            const { type, name } = file;
-            if (this.filePushStream.isAllowedFile(file)) {
-                this.pushFile(file, destinationDir);
-            } else {
-                const errorParams: PushUpdateParams = {
-                    pushId: FilePushHandler.REQUEST_NEW_PUSH_ID,
-                    fileName: name,
-                    message: `Unsupported type "${type}"`,
-                    progress: -1,
-                    error: true,
-                    finished: true,
-                };
-                this.sendUpdate(errorParams);
-            }
-        });
+        void this.pushFiles(files);
         return true;
     }
 
-    public pushFiles(files: File[] | FileList, destinationDir?: string): void {
+    public async pushFiles(files: File[] | FileList, destinationDir?: string): Promise<void> {
         const list = Array.isArray(files) ? files : Array.from(files);
-        const resolvedDestinationDir =
-            typeof destinationDir === 'string'
-                ? destinationDir
-                : this.options.resolveDestinationDir
-                  ? this.options.resolveDestinationDir(list)
-                  : undefined;
+        let resolvedDestinationDir: string | null | undefined;
+        try {
+            resolvedDestinationDir =
+                typeof destinationDir === 'string' ? destinationDir : await this.options.resolveDestinationDir?.(list);
+        } catch (error) {
+            this.listeners.forEach((listener) => listener.onError(error instanceof Error ? error : String(error)));
+            return;
+        }
 
+        if (resolvedDestinationDir === null) {
+            return;
+        }
+        const selectedDirectory = resolvedDestinationDir;
         list.forEach((file: File) => {
             const { type, name } = file;
             if (this.filePushStream.isAllowedFile(file)) {
-                this.pushFile(file, resolvedDestinationDir);
+                this.pushFile(file, selectedDirectory);
             } else {
                 const errorParams: PushUpdateParams = {
                     pushId: FilePushHandler.REQUEST_NEW_PUSH_ID,

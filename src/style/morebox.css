@@ -741,3 +741,144 @@ body.stream .scrcpy-settings-dialog .stream-command-status.error {
     background: hsl(342, 75%, 97%);
     color: hsl(342, 75%, 38%);
 }
+
+/* Match the add-device and device-settings modals. */
+body.stream .more-box-overlay {
+    padding: 24px;
+    background: rgb(20 35 55 / 38%);
+    backdrop-filter: blur(4px);
+}
+
+body.stream .scrcpy-settings-dialog.app-modal {
+    width: min(820px, 100%);
+    max-height: calc(100vh - 48px);
+    padding: 28px;
+    border-radius: 20px;
+    border-color: var(--modal-border);
+    background: var(--modal-surface);
+    box-shadow: var(--modal-shadow);
+    font-size: 13px;
+}
+
+body.stream .scrcpy-settings-dialog > .more-box-header {
+    position: static;
+    display: block;
+    min-height: 0;
+    margin: 0 0 24px;
+    padding: 0;
+    border: 0;
+}
+
+body.stream .scrcpy-settings-dialog .more-box-header p {
+    margin: 0 0 8px;
+    font-size: 22px;
+    font-weight: 650;
+    letter-spacing: -0.025em;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+body.stream .scrcpy-settings-dialog .more-box-heading {
+    padding: 0;
+}
+
+body.stream .scrcpy-settings-dialog .more-box-heading small {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+body.stream .scrcpy-settings-dialog .more-box-close {
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    font-size: 24px;
+    font-weight: 400;
+}
+
+body.stream .scrcpy-settings-dialog .more-box-close:hover {
+    background: var(--modal-tint);
+}
+
+body.stream .scrcpy-settings-dialog > .more-box-body {
+    padding: 0 3px 3px;
+}
+
+body.stream .scrcpy-settings-dialog .stream-input-panel,
+body.stream .scrcpy-settings-dialog .spoiler,
+body.stream .scrcpy-settings-dialog .stream-audio-panel {
+    margin-top: 12px;
+    border-radius: 12px;
+    border-color: var(--modal-border);
+    background: var(--modal-surface);
+}
+
+body.stream .scrcpy-settings-dialog .stream-input-panel:first-child {
+    margin-top: 0;
+}
+
+body.stream .scrcpy-settings-dialog .settings-disclosure-heading {
+    font-size: 13px;
+}
+
+body.stream .scrcpy-settings-dialog input:not([type="checkbox"]):not([type="range"]),
+body.stream .scrcpy-settings-dialog select,
+body.stream .scrcpy-settings-dialog textarea,
+body.stream .scrcpy-settings-dialog .video-numeric-value {
+    border-radius: 9px;
+    border-color: var(--modal-border);
+    font-size: 13px;
+}
+
+body.stream .scrcpy-settings-dialog .video-numeric-value input {
+    border-radius: 0;
+}
+
+body.stream .scrcpy-settings-dialog button:not(.more-box-close) {
+    gap: 8px;
+    border-radius: 999px;
+    color: var(--modal-text);
+}
+
+body.stream .scrcpy-settings-dialog button.primary-action {
+    border-color: var(--modal-accent);
+    background: var(--modal-accent);
+    color: white;
+}
+
+body.stream .scrcpy-settings-dialog button.primary-action:hover {
+    background: hsl(207, 87%, 42%);
+}
+
+body.stream .scrcpy-settings-dialog .audio-status,
+body.stream .scrcpy-settings-dialog .stream-command-status {
+    border: 0;
+    border-radius: 10px;
+    background: var(--modal-tint);
+    color: var(--modal-accent);
+}
+
+body.stream .scrcpy-settings-dialog .stream-command-status.error {
+    background: #fff0f1;
+    color: #a82d36;
+}
+
+body.stream .scrcpy-settings-dialog > .more-box-footer {
+    position: static;
+    margin-top: 24px;
+    padding: 0;
+    border: 0;
+    background: var(--modal-surface);
+}
+
+@media (max-width: 600px) {
+    body.stream .more-box-overlay {
+        padding: 12px;
+    }
+
+    body.stream .scrcpy-settings-dialog.app-modal {
+        padding: 24px 20px;
+    }
+}

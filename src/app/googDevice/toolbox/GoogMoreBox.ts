@@ -1,3 +1,5 @@
+import SvgImage from '../../ui/SvgImage';
+import '../../../style/modal.css';
 import '../../../style/morebox.css';
 import { BasePlayer } from '../../player/BasePlayer';
 import { TextControlMessage } from '../../controlMessage/TextControlMessage';
@@ -43,7 +45,7 @@ export class GoogMoreBox {
         overlay.className = 'more-box-overlay';
         overlay.hidden = true;
         const moreBox = document.createElement('div');
-        moreBox.className = 'more-box scrcpy-settings-dialog';
+        moreBox.className = 'more-box scrcpy-settings-dialog app-modal';
         moreBox.setAttribute('role', 'dialog');
         moreBox.setAttribute('aria-modal', 'true');
         const header = document.createElement('div');
@@ -63,7 +65,14 @@ export class GoogMoreBox {
         const subtitle = document.createElement('small');
         subtitle.textContent = 'Send input, control device and configure quick settings';
         heading.append(nameBox, subtitle);
-        header.append(heading, closeButton);
+        const topRow = document.createElement('div');
+        topRow.className = 'app-modal-top-row';
+        const symbol = document.createElement('span');
+        symbol.className = 'app-modal-symbol';
+        symbol.setAttribute('aria-hidden', 'true');
+        symbol.appendChild(SvgImage.create(SvgImage.Icon.SETTINGS));
+        topRow.append(symbol, closeButton);
+        header.append(topRow, heading);
         moreBox.appendChild(header);
         const body = document.createElement('div');
         body.className = 'more-box-body';
@@ -255,10 +264,7 @@ export class GoogMoreBox {
                     const slider = document.createElement('input');
                     slider.type = 'range';
                     slider.min = input.min;
-                    slider.max = Math.max(
-                        input === bitrateInput ? 16777216 : 120,
-                        Number(input.value),
-                    ).toString();
+                    slider.max = Math.max(input === bitrateInput ? 16777216 : 120, Number(input.value)).toString();
                     slider.step = '1';
                     slider.value = input.value;
                     slider.setAttribute('aria-label', input === bitrateInput ? 'Video bitrate' : 'Maximum FPS');
@@ -354,24 +360,28 @@ export class GoogMoreBox {
         sendButton.classList.add('primary-action');
         const commandGrid = document.createElement('div');
         commandGrid.className = 'stream-command-grid';
-        commands.filter((command) => command instanceof HTMLButtonElement).forEach((button) => {
-            commandGrid.appendChild(button);
-        });
+        commands
+            .filter((command) => command instanceof HTMLButtonElement)
+            .forEach((button) => {
+                commandGrid.appendChild(button);
+            });
         body.prepend(commandGrid);
-        commands.filter((command) => command.classList.contains('spoiler')).forEach((spoiler) => {
-            const description = document.createElement('small');
-            description.textContent = 'Quick display and stream options';
-            const summary = spoiler.querySelector('summary');
-            if (summary) {
-                const caption = document.createElement('span');
-                caption.className = 'settings-disclosure-caption';
-                caption.textContent = summary.textContent;
-                caption.appendChild(description);
-                summary.textContent = '';
-                summary.append(GoogMoreBox.createActionIcon('Video'), caption);
-            }
-            body.appendChild(spoiler);
-        });
+        commands
+            .filter((command) => command.classList.contains('spoiler'))
+            .forEach((spoiler) => {
+                const description = document.createElement('small');
+                description.textContent = 'Quick display and stream options';
+                const summary = spoiler.querySelector('summary');
+                if (summary) {
+                    const caption = document.createElement('span');
+                    caption.className = 'settings-disclosure-caption';
+                    caption.textContent = summary.textContent;
+                    caption.appendChild(description);
+                    summary.textContent = '';
+                    summary.append(GoogMoreBox.createActionIcon('Video'), caption);
+                }
+                body.appendChild(spoiler);
+            });
 
         const audioPanel = document.createElement('details');
         audioPanel.className = 'stream-audio-panel';
@@ -714,7 +724,9 @@ export class GoogMoreBox {
         }, 5000);
         this.pendingClipboard = { sequence, text, paste, acknowledged: false, timer };
         this.showCommandStatus('Waiting for Android clipboard confirmation…');
-        console.info(`${TAG} Sending clipboard command: sequence=${sequence}, characters=${text.length}, paste=${paste}`);
+        console.info(
+            `${TAG} Sending clipboard command: sequence=${sequence}, characters=${text.length}, paste=${paste}`,
+        );
         this.client.sendMessage(CommandControlMessage.createSetClipboardCommand(text, paste, sequence));
     }
 
@@ -767,7 +779,7 @@ export class GoogMoreBox {
             'Original size': 'M3 3h18v18H3zM8 9v6m4-6v6m4-6v6',
             'Save video settings': 'M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5',
             'Apply audio settings': 'm4 12 5 5L20 6',
-            'Disconnect': 'M6 10h12v11H6zM8 10V6a4 4 0 0 1 8 0v4',
+            Disconnect: 'M6 10h12v11H6zM8 10V6a4 4 0 0 1 8 0v4',
             Commands: 'M3 6h18v12H3zM6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M7 15h10',
             Video: 'M3 6h12v12H3zM15 10l6-4v12l-6-4',
             Audio: 'M4 9h4l5-5v16l-5-5H4zM16 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14',

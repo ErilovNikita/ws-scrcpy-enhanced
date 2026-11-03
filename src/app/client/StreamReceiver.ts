@@ -1,3 +1,4 @@
+import { showNotice } from '../ui/Modal';
 import { ManagerClient } from './ManagerClient';
 import { ControlMessage } from '../controlMessage/ControlMessage';
 import DeviceMessage from '../googDevice/DeviceMessage';
@@ -410,7 +411,7 @@ export class StreamReceiver<P extends ParamsStream> extends ManagerClient<Params
         ) {
             return;
         }
-        if (typeof window === 'undefined' || typeof window.alert !== 'function') {
+        if (typeof document === 'undefined') {
             return;
         }
         const key = `${info.error}::${info.message}::${info.retryable ? 1 : 0}`;
@@ -419,7 +420,7 @@ export class StreamReceiver<P extends ParamsStream> extends ManagerClient<Params
         }
         this.lastPromptedFinlinkErrorKey = key;
         try {
-            window.alert(info.message || info.error);
+            showNotice('Ошибка видеопотока', info.message || info.error);
         } catch {}
     }
 }

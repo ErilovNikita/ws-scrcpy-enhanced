@@ -1,3 +1,4 @@
+import { promptUploadDirectory } from '../../ui/Modal';
 import { BaseClient } from '../../client/BaseClient';
 import { ParamsStreamScrcpy } from '../../../types/ParamsStreamScrcpy';
 import { GoogMoreBox } from '../toolbox/GoogMoreBox';
@@ -669,32 +670,15 @@ export class StreamClientScrcpy
         const logger = (this.uploadNotifications = new DragAndPushLogger());
         let lastDestinationDir = '/sdcard/Download';
         this.filePushHandler = new FilePushHandler(element, new ScrcpyFilePushStream(this.streamReceiver), {
-            resolveDestinationDir: () => {
-                const input = window.prompt(
-                    'Upload destination directory (absolute path like /sdcard/Download). Leave empty or Cancel to use default /data/local/tmp',
-                    lastDestinationDir,
-                );
-                if (input === null) {
-                    return;
+            resolveDestinationDir: async () => {
+                const directory = await promptUploadDirectory(lastDestinationDir);
+                if (directory === null) {
+                    return null;
                 }
-                const trimmed = input.trim();
-                if (!trimmed) {
-                    return;
+                if (directory) {
+                    lastDestinationDir = directory;
                 }
-                const normalized = trimmed.replace(/\\/g, '/');
-                if (!normalized.startsWith('/')) {
-                    return;
-                }
-                if (normalized.includes('\0')) {
-                    return;
-                }
-                const withoutTrailingSlash = normalized.length > 1 ? normalized.replace(/\/+$/, '') : normalized;
-                const segments = withoutTrailingSlash.split('/').filter(Boolean);
-                if (segments.some((s) => s === '.' || s === '..')) {
-                    return;
-                }
-                lastDestinationDir = withoutTrailingSlash;
-                return withoutTrailingSlash;
+                return directory || undefined;
             },
         });
         this.filePushHandler.addEventListener(logger);
