@@ -1,3 +1,4 @@
+import { openAddDeviceDialog } from '../ui/AddDeviceDialog';
 import { ManagerClient } from './ManagerClient';
 import { Message } from '../../types/Message';
 import { BaseDeviceDescriptor } from '../../types/BaseDeviceDescriptor';
@@ -346,9 +347,51 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
             devices = document.createElement('div');
             devices.id = id;
             devices.className = 'table-wrapper';
+            const header = document.createElement('header');
+            header.className = 'device-list-header';
+            const heading = document.createElement('div');
+            heading.className = 'device-list-heading';
+            const title = document.createElement('h1');
+            title.innerText = 'Devices';
+            const subtitle = document.createElement('p');
+            subtitle.innerText = 'Connect to and manage your devices';
+            heading.append(title, subtitle);
+            const actions = document.createElement('section');
+            actions.className = 'device-list-actions';
+            actions.setAttribute('aria-label', 'Действия с устройствами');
+            const buttons = [
+                { label: 'Открыть все устройства', icon: Icon.OPEN_DEVICES, primary: false },
+                { label: 'Добавить устройство', icon: Icon.ADD_DEVICE, primary: true },
+            ];
+            buttons.forEach(({ label, icon, primary }) => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = `device-list-action${primary ? ' device-list-action-primary' : ''}`;
+                const image = SvgImage.create(icon);
+                image.setAttribute('aria-hidden', 'true');
+                button.appendChild(image);
+                if (primary) {
+                    button.classList.add('device-list-action-icon');
+                    button.title = label;
+                    button.setAttribute('aria-label', label);
+                    button.onclick = () => openAddDeviceDialog((host, port) => this.connectNetworkDevice(host, port));
+                } else {
+                    const text = document.createElement('span');
+                    text.innerText = label;
+                    button.appendChild(text);
+                }
+                actions.appendChild(button);
+            });
+            header.append(heading, actions);
+            devices.appendChild(header);
             document.body.appendChild(devices);
         }
         return devices;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    protected connectNetworkDevice(_host: string, _port: number): Promise<string> {
+        return Promise.reject(new Error('Подключение Android недоступно на этом сервере.'));
     }
 
     protected updateDescriptor(descriptor: DD): void {

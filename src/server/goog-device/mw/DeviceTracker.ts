@@ -1,3 +1,4 @@
+import { CONNECT_ADB_DEVICE } from '../../../common/AdbNetwork';
 import WS from 'ws';
 import { Mw, RequestParameters } from '../../mw/Mw';
 import { ControlCenterCommand } from '../../../common/ControlCenterCommand';
@@ -72,10 +73,41 @@ export class DeviceTracker extends Mw {
 
     protected onSocketMessage(event: WS.MessageEvent): void {
         let command: ControlCenterCommand;
+        let requestId = -1;
+        let isConnect = false;
         try {
+            const body = JSON.parse(event.data.toString());
+            requestId = body.id;
+            isConnect = body.type === CONNECT_ADB_DEVICE;
             command = ControlCenterCommand.fromJSON(event.data.toString());
         } catch (error: any) {
+            if (isConnect) {
+                this.sendMessage({
+                    id: requestId,
+                    type: CONNECT_ADB_DEVICE,
+                    data: { success: false, message: error.message },
+                });
+                return;
+            }
             console.error(`[${DeviceTracker.TAG}], Received message: ${event.data}. Error: ${error?.message}`);
+            return;
+        }
+        if (isConnect) {
+            const { host, port } = command.getData();
+            this.adt.connectNetworkDevice(host, port).then(
+                (serial) =>
+                    this.sendMessage({
+                        id: requestId,
+                        type: CONNECT_ADB_DEVICE,
+                        data: { success: true, message: `Устройство ${serial} подключено.` },
+                    }),
+                (error: Error) =>
+                    this.sendMessage({
+                        id: requestId,
+                        type: CONNECT_ADB_DEVICE,
+                        data: { success: false, message: error.message },
+                    }),
+            );
             return;
         }
         this.adt.runCommand(command).catch((e) => {

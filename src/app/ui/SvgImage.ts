@@ -1,3 +1,5 @@
+import AddDeviceSVG from '../../public/images/buttons/add-device.svg';
+import OpenDevicesSVG from '../../public/images/buttons/open-devices.svg';
 import KeyboardSVG from '../../public/images/skin-light/ic_keyboard_678_48dp.svg';
 import MoreSVG from '../../public/images/skin-light/ic_more_horiz_678_48dp.svg';
 import CameraSVG from '../../public/images/skin-light/ic_photo_camera_678_48dp.svg';
@@ -47,12 +49,18 @@ export enum Icon {
     SERVER,
     DEVICE_LIST,
     CHEVRON_RIGHT,
+    ADD_DEVICE,
+    OPEN_DEVICES,
 }
 
 export default class SvgImage {
     static Icon = Icon;
     private static getSvgString(type: Icon): string {
         switch (type) {
+            case Icon.ADD_DEVICE:
+                return AddDeviceSVG;
+            case Icon.OPEN_DEVICES:
+                return OpenDevicesSVG;
             case Icon.KEYBOARD:
                 return KeyboardSVG;
             case Icon.MORE:

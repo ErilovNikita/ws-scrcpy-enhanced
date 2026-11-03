@@ -1,3 +1,4 @@
+import { validateAdbAddress } from '../../../common/AdbNetwork';
 import { TrackerChangeSet } from '@dead50f7/adbkit/lib/TrackerChangeSet';
 import { Device } from '../Device';
 import { Service } from '../../services/Service';
@@ -154,6 +155,23 @@ export class ControlCenter extends BaseControlCenter<GoogDeviceDescriptor> imple
     public release(): void {
         this.deviceMap.forEach((device) => device.stopStatusUpdates());
         this.stopTracker();
+    }
+
+    public async connectNetworkDevice(host: unknown, port: unknown): Promise<string> {
+        const address = validateAdbAddress(host, port);
+        const serial = await this.client.connect(address.host, address.port);
+        // A successful TCP connection can still be unauthorized or offline.
+        const devices = await this.client.listDevices();
+        const device = devices.find((item) => item.id === serial);
+        if (!device || device.type !== DeviceState.DEVICE) {
+            throw new Error(
+                String(device?.type) === 'unauthorized'
+                    ? 'Разрешите отладку на экране Android и повторите подключение.'
+                    : 'ADB подключился, но устройство ещё не готово. Проверьте разрешение отладки и повторите попытку.',
+            );
+        }
+        this.handleConnected(device.id, device.type);
+        return serial;
     }
 
     public async runCommand(command: ControlCenterCommand): Promise<void> {

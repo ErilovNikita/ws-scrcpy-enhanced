@@ -1,3 +1,4 @@
+import { CONNECT_ADB_DEVICE } from '../../../common/AdbNetwork';
 import { createDeviceStatus } from './DeviceStatus';
 import '../../../style/devicelist.css';
 import { BaseDeviceTracker } from '../../client/BaseDeviceTracker';
@@ -38,6 +39,73 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
     private static instancesByUrl: Map<string, DeviceTracker> = new Map();
     protected static tools: Set<Tool> = new Set();
     protected tableId = 'goog_device_list';
+    private pendingConnections = new Map<
+        number,
+        { resolve: (message: string) => void; reject: (error: Error) => void; timer: ReturnType<typeof setTimeout> }
+    >();
+
+    protected connectNetworkDevice(host: string, port: number): Promise<string> {
+        if (!this.hasConnection() || !this.ws) {
+            return Promise.reject(new Error('Нет связи с сервером. Дождитесь восстановления соединения.'));
+        }
+        const id = this.getNextId();
+        return new Promise((resolve, reject) => {
+            const timer = setTimeout(() => {
+                this.pendingConnections.delete(id);
+                reject(
+                    new Error(
+                        'Сервер не ответил за 30 секунд. Проверьте IP-адрес, порт и доступность устройства. Подключение на сервере может ещё завершиться.',
+                    ),
+                );
+            }, 30000);
+            this.pendingConnections.set(id, { resolve, reject, timer });
+            try {
+                this.ws?.send(JSON.stringify({ id, type: CONNECT_ADB_DEVICE, data: { host, port } }));
+            } catch (error) {
+                clearTimeout(timer);
+                this.pendingConnections.delete(id);
+                reject(error);
+            }
+        });
+    }
+
+    protected onSocketMessage(event: MessageEvent): void {
+        let message: Message;
+        try {
+            message = JSON.parse(event.data);
+        } catch (_) {
+            super.onSocketMessage(event);
+            return;
+        }
+        if (message.type === CONNECT_ADB_DEVICE) {
+            const pending = this.pendingConnections.get(message.id);
+            if (pending) {
+                clearTimeout(pending.timer);
+                this.pendingConnections.delete(message.id);
+                const data = message.data as { success: boolean; message: string };
+                if (data.success) {
+                    pending.resolve(data.message);
+                } else {
+                    pending.reject(new Error(data.message));
+                }
+            }
+            return;
+        }
+        super.onSocketMessage(event);
+    }
+
+    private rejectPendingConnections(): void {
+        this.pendingConnections.forEach(({ reject, timer }) => {
+            clearTimeout(timer);
+            reject(new Error('Соединение с сервером закрыто. Проверьте список устройств перед повторной попыткой.'));
+        });
+        this.pendingConnections.clear();
+    }
+
+    protected onSocketClose(event: CloseEvent): void {
+        this.rejectPendingConnections();
+        super.onSocketClose(event);
+    }
 
     public static start(hostItem: HostItem): DeviceTracker {
         const url = this.buildUrlForTracker(hostItem).toString();
@@ -449,6 +517,7 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
     }
 
     public destroy(): void {
+        this.rejectPendingConnections();
         super.destroy();
         DeviceTracker.instancesByUrl.delete(this.url.toString());
         if (!DeviceTracker.instancesByUrl.size) {

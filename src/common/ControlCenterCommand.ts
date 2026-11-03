@@ -1,3 +1,4 @@
+import { CONNECT_ADB_DEVICE, validateAdbAddress } from './AdbNetwork';
 import { WDAMethod } from './WDAMethod';
 
 export class ControlCenterCommand {
@@ -30,6 +31,9 @@ export class ControlCenterCommand {
             command.udid = data.udid;
         }
         switch (body.type) {
+            case CONNECT_ADB_DEVICE:
+                command.data = validateAdbAddress(data.host, data.port);
+                return command;
             case this.KILL_SERVER:
                 if (typeof data.pid !== 'number' && data.pid <= 0) {
                     throw new Error('Invalid "pid" value');
