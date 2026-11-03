@@ -1,3 +1,4 @@
+import { AllDevicesView, ALL_DEVICES_ACTION } from './client/AllDevicesView';
 import '../style/app.css';
 import { StreamClientScrcpy } from './googDevice/client/StreamClientScrcpy';
 import { StreamClientWebRTC } from './googDevice/client/StreamClientWebRTC';
@@ -115,6 +116,9 @@ window.onload = async function (): Promise<void> {
         tools.forEach((tool) => {
             DeviceTracker.registerTool(tool);
         });
+    }
+    if (action === ALL_DEVICES_ACTION) {
+        AllDevicesView.start();
     }
     HostTracker.start();
 };

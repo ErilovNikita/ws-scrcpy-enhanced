@@ -70,9 +70,9 @@ function readI64BE(data: Uint8Array, offset: number): number {
     if (hi >= 0) {
         return hi * 4294967296 + lo;
     }
-    const hiU = (~hi) >>> 0;
-    const loU = (~lo) >>> 0;
-    return -((hiU * 4294967296 + loU) + 1);
+    const hiU = ~hi >>> 0;
+    const loU = ~lo >>> 0;
+    return -(hiU * 4294967296 + loU + 1);
 }
 
 export class StreamClientScrcpy
@@ -83,6 +83,10 @@ export class StreamClientScrcpy
     private static players: Map<string, PlayerClass> = new Map<string, PlayerClass>();
     private static savedVideoSettingsKeyPrefix = 'ws-scrcpy:saved-video-settings:v1';
 
+    private readonly embeddedOverview =
+        window.parent !== window &&
+        new URLSearchParams(location.hash.replace(/^#!/, '')).get('embedded') === 'overview';
+    private overviewLive = false;
     private controlButtons?: HTMLElement;
     private deviceName = '';
     private clientId = -1;
@@ -233,7 +237,18 @@ export class StreamClientScrcpy
 
         const { udid, player: playerName } = this.params;
         this.startStream({ udid, player, playerName, fitToScreen, videoSettings });
-        this.setBodyClass('stream');
+        this.setBodyClass(this.embeddedOverview ? 'stream stream-overview' : 'stream');
+        if (this.embeddedOverview) {
+            window.addEventListener(
+                'pagehide',
+                () => {
+                    this.stopping = true;
+                    this.streamReceiver.stop();
+                    this.player?.stop();
+                },
+                { once: true },
+            );
+        }
     }
 
     public static parseParameters(params: URLSearchParams): ParamsStreamScrcpy {
@@ -261,7 +276,11 @@ export class StreamClientScrcpy
         if (!this.player) {
             return;
         }
-        if (!this.screenOffCommandSent) {
+        if (this.embeddedOverview && !this.overviewLive) {
+            this.overviewLive = true;
+            window.parent.postMessage({ type: 'overview-stream-status', status: 'live' }, location.origin);
+        }
+        if (!this.embeddedOverview && !this.screenOffCommandSent) {
             this.sendMessage(CommandControlMessage.createSetScreenPowerModeCommand(false));
             this.screenOffCommandSent = true;
         }
@@ -319,8 +338,7 @@ export class StreamClientScrcpy
         });
         if (!info) {
             info =
-                infoArray.find((value) => value.displayInfo.displayId === DisplayInfo.DEFAULT_DISPLAY) ||
-                infoArray[0];
+                infoArray.find((value) => value.displayInfo.displayId === DisplayInfo.DEFAULT_DISPLAY) || infoArray[0];
             if (!info) {
                 return;
             }
@@ -343,6 +361,28 @@ export class StreamClientScrcpy
         }
         const { videoSettings, screenInfo } = info;
         this.player.setDisplayInfo(info.displayInfo);
+        if (this.embeddedOverview && screenInfo) {
+            window.parent.postMessage(
+                {
+                    type: 'overview-stream-status',
+                    status: 'size',
+                    width: screenInfo.videoSize.width,
+                    height: screenInfo.videoSize.height,
+                },
+                location.origin,
+            );
+        }
+        if (this.embeddedOverview && videoSettings && screenInfo) {
+            // Join the existing stream without changing the resolution of other viewers.
+            this.player.setScreenInfo(screenInfo);
+            this.applyNewVideoSettings(videoSettings, false);
+            this.clientsCount = info.connectionCount;
+            if (!this.joinedStream) {
+                this.joinedStream = true;
+                this.sendMessage(CommandControlMessage.createSetVideoSettingsCommand(videoSettings));
+            }
+            return;
+        }
         if (!this.displaySettingsInitialized) {
             this.displaySettingsInitialized = true;
             if (!this.hasExplicitFitToScreen) {
@@ -411,6 +451,11 @@ export class StreamClientScrcpy
     };
 
     public onDisconnected = (_ev: CloseEvent): void => {
+        if (this.embeddedOverview) {
+            this.joinedStream = false;
+            this.overviewLive = false;
+            window.parent.postMessage({ type: 'overview-stream-status', status: 'offline' }, location.origin);
+        }
         this.connectedHandled = false;
         this.screenOffCommandSent = false;
         this.syncAudioConnection(false);
@@ -506,7 +551,7 @@ export class StreamClientScrcpy
             throw Error(`Invalid udid value: "${udid}"`);
         }
 
-        this.audioEnabled = ScrcpyAudioController.isSupported();
+        this.audioEnabled = !this.embeddedOverview && ScrcpyAudioController.isSupported();
         this.fitToScreen = fitToScreen;
         this.screenOffCommandSent = false;
         this.hasExplicitFitToScreen = typeof fitToScreen === 'boolean';
@@ -552,7 +597,11 @@ export class StreamClientScrcpy
             player.setVideoSettings(videoSettings, this.fitToScreen || false, false);
         }
         this.savedVideoSettingsApplied = false;
-        this.savedVideoSettings = StreamClientScrcpy.readSavedVideoSettings(player.getName(), udid, videoSettings.displayId);
+        this.savedVideoSettings = StreamClientScrcpy.readSavedVideoSettings(
+            player.getName(),
+            udid,
+            videoSettings.displayId,
+        );
         this.applyNewVideoSettings(videoSettings, false);
 
         const deviceView = document.createElement('div');
@@ -596,10 +645,12 @@ export class StreamClientScrcpy
 
         document.body.appendChild(deviceView);
         this.uiStateBinding?.dispose();
-        this.uiStateBinding = Util.bindFormStateToLocalStorage(deviceView, 'ws-scrcpy:ui-state:v1', {
-            deferRestore: true,
-            restoreMode: 'simulate',
-        });
+        if (!this.embeddedOverview) {
+            this.uiStateBinding = Util.bindFormStateToLocalStorage(deviceView, 'ws-scrcpy:ui-state:v1', {
+                deferRestore: true,
+                restoreMode: 'simulate',
+            });
+        }
         this.uiStateRestored = false;
         window.addEventListener('resize', this.onWindowResize);
         player.on('video-view-resize', this.onPlayerViewResize);
@@ -790,8 +841,7 @@ export class StreamClientScrcpy
             return;
         }
         const dpr = window.devicePixelRatio || 1;
-        const viewportWidth =
-            document.documentElement.clientWidth || document.body.clientWidth || window.innerWidth;
+        const viewportWidth = document.documentElement.clientWidth || document.body.clientWidth || window.innerWidth;
         const viewportHeight =
             document.documentElement.clientHeight || document.body.clientHeight || window.innerHeight;
         const width = (viewportWidth * dpr) & ~15;
@@ -836,7 +886,7 @@ export class StreamClientScrcpy
             this.viewportFitRaf = undefined;
             this.applyViewportFit();
         });
-    };
+    }
 
     private applyViewportFit(): void {
         if (!this.player || !this.videoContainer) {
@@ -873,6 +923,9 @@ export class StreamClientScrcpy
         }
         this.initialAutoFitApplied = true;
         this.scheduleViewportFit();
+        if (this.embeddedOverview) {
+            return;
+        }
         const maxBounds = this.getMaxSize();
         if (!maxBounds) {
             return;
@@ -893,7 +946,10 @@ export class StreamClientScrcpy
             return;
         }
         this.savedVideoSettingsApplied = true;
-        const merged = StreamClientScrcpy.mergeVideoSettingsWithSaved(this.player.getVideoSettings(), this.savedVideoSettings);
+        const merged = StreamClientScrcpy.mergeVideoSettingsWithSaved(
+            this.player.getVideoSettings(),
+            this.savedVideoSettings,
+        );
         this.sendNewVideoSetting(merged);
     }
 
@@ -925,10 +981,13 @@ export class StreamClientScrcpy
         }
     }
 
-    private static mergeVideoSettingsWithSaved(current: VideoSettings, saved: SavedVideoSettingsPayload): VideoSettings {
+    private static mergeVideoSettingsWithSaved(
+        current: VideoSettings,
+        saved: SavedVideoSettingsPayload,
+    ): VideoSettings {
         const toInt = (value: any): number | undefined => {
             const n = typeof value === 'number' ? value : typeof value === 'string' ? parseInt(value, 10) : NaN;
-            return typeof n === 'number' && !isNaN(n) ? (n | 0) : undefined;
+            return typeof n === 'number' && !isNaN(n) ? n | 0 : undefined;
         };
         const bitrate = toInt(saved.bitrate);
         const maxFps = toInt(saved.maxFps);

@@ -1,3 +1,4 @@
+import { AllDevicesView, ALL_DEVICES_ACTION } from './AllDevicesView';
 import { openAddDeviceDialog } from '../ui/AddDeviceDialog';
 import { ManagerClient } from './ManagerClient';
 import { Message } from '../../types/Message';
@@ -100,8 +101,10 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
         super(params);
         this.elementId = `tracker_instance${++BaseDeviceTracker.instanceId}`;
         this.trackerName = `Unavailable. Host: ${params.hostname}, type: ${params.type}`;
-        this.setBodyClass('list');
-        this.setTitle();
+        this.setBodyClass(AllDevicesView.instance ? 'list overview' : 'list');
+        if (!AllDevicesView.instance) {
+            this.setTitle();
+        }
     }
 
     public static parseParameters(params: URLSearchParams): ParamsDeviceTracker {
@@ -126,6 +129,7 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
         data.forEach((item) => {
             this.buildDeviceRow(block, item);
         });
+        AllDevicesView.instance?.syncTracker(this.elementId, block);
     }
 
     private setNameValue(parent: Element | null, name: string): void {
@@ -293,6 +297,7 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
     }
 
     protected onSocketClose(event: CloseEvent): void {
+        AllDevicesView.instance?.removeTracker(this.elementId);
         if (this.destroyed) {
             return;
         }
@@ -379,6 +384,9 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
                     const text = document.createElement('span');
                     text.innerText = label;
                     button.appendChild(text);
+                    button.onclick = () => {
+                        location.hash = `!action=${ALL_DEVICES_ACTION}`;
+                    };
                 }
                 actions.appendChild(button);
             });
@@ -431,6 +439,7 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
     }
 
     public destroy(): void {
+        AllDevicesView.instance?.removeTracker(this.elementId);
         super.destroy();
         if (this.created) {
             const el = document.getElementById(this.elementId);

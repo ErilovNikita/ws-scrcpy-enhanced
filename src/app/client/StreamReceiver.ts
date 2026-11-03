@@ -403,6 +403,13 @@ export class StreamReceiver<P extends ParamsStream> extends ManagerClient<Params
     }
 
     private showFinlinkErrorPrompt(info: { error: string; message: string; retryable: boolean }): void {
+        if (
+            typeof window !== 'undefined' &&
+            window.parent !== window &&
+            new URLSearchParams(window.location.hash.replace(/^#!/, '')).get('embedded') === 'overview'
+        ) {
+            return;
+        }
         if (typeof window === 'undefined' || typeof window.alert !== 'function') {
             return;
         }
