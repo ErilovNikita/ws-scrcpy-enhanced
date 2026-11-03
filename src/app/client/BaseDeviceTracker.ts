@@ -193,7 +193,7 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
         const dialogHeader = document.createElement('div');
         dialogHeader.className = 'device-settings-header';
 
-        const title = document.createElement('div');
+        const title = document.createElement('h2');
         title.className = 'device-settings-title';
         title.id = `${id}_settings_title`;
         title.innerText = deviceName;
@@ -289,7 +289,14 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
             }
         });
 
-        dialogHeader.append(heading, closeButton);
+        const topRow = document.createElement('div');
+        topRow.className = 'device-settings-top-row';
+        const symbol = document.createElement('span');
+        symbol.className = 'device-settings-symbol';
+        symbol.setAttribute('aria-hidden', 'true');
+        symbol.appendChild(SvgImage.create(Icon.SETTINGS));
+        topRow.append(symbol, closeButton);
+        dialogHeader.append(topRow, heading);
         dialog.append(dialogHeader, content);
         overlay.appendChild(dialog);
         settingsRow.appendChild(trigger);
